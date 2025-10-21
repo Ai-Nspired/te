@@ -21,6 +21,7 @@
         --accent-color: #1a2a3a;
         --secondary-text: #6c757d;
         --shadow-color: rgba(0,0,0,0.05);
+        --accent-color-rgb: 26, 42, 58; /* RGB for 1a2a3a */
     }
     [data-mode="dark"] {
         /* Dark Mode - Soft Contrast (Opposite of Default) */
@@ -33,6 +34,7 @@
         --accent-color: #c7a17a; /* Warm beige/gold accent */
         --secondary-text: #9fa8da;
         --shadow-color: rgba(0,0,0,0.3);
+        --accent-color-rgb: 199, 161, 122; /* RGB for c7a17a */
     }
     [data-mode="neo"] {
         /* Neo Mode - HIGH CONTRAST (Matrix Style) */
@@ -45,6 +47,7 @@
         --accent-color: #00FF00;        /* BRIGHT GREEN for accents/borders/buttons */
         --secondary-text: #00AA00;      /* Slightly darker green for headers/secondary text */
         --shadow-color: transparent;
+        --accent-color-rgb: 0, 255, 0; /* RGB for 00FF00 */
     }
 
     body {
@@ -135,8 +138,116 @@
         border-radius: 4px;
         font-size: 0.9rem;
     }
+    /* ... existing modal, result, and conversation block styles ... */
+    
+    .conversation-block .content {
+        box-shadow: 0 4px 10px var(--shadow-color);
+        margin-top: 1rem;
+        transition: box-shadow 0.3s;
+    }
 
-    /* --- Modal Styles --- */
+    /* Neo Mode specific Content Glow */
+    [data-mode="neo"] .conversation-block .content {
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.6), 
+                    0 0 20px rgba(0, 255, 0, 0.4), 
+                    inset 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+    
+    /* --- History Panel Styles --- */
+    #historyPanel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 300px;
+        max-width: 80vw;
+        background-color: var(--modal-bg);
+        border-right: 1px solid var(--border-color);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+    }
+    #historyPanel.open {
+        transform: translateX(0);
+    }
+
+    .history-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column; /* Stack header elements */
+        gap: 0.75rem;
+    }
+    .history-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .history-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--accent-color);
+    }
+    .history-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .history-actions button {
+        background: none;
+        border: 1px solid var(--accent-color);
+        color: var(--accent-color);
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .history-actions button:hover {
+        background-color: var(--accent-color);
+        color: var(--bg-color);
+    }
+    .close-history {
+        background: none;
+        border: none;
+        color: var(--accent-color);
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+
+    #historyList {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem 0;
+    }
+    .history-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px dashed var(--border-color);
+        font-size: 0.9rem;
+        transition: background-color 0.2s;
+    }
+    .history-item:hover {
+        /* Use the CSS variable for dynamic hover color */
+        background-color: rgba(var(--accent-color-rgb), 0.1); 
+    }
+    .history-item p {
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 700;
+    }
+    .history-item small {
+        color: var(--secondary-text);
+        font-size: 0.75rem;
+        display: block;
+        margin-top: 2px;
+    }
+    /* --- Other styles (omitted for brevity) remain the same --- */
     .modal-overlay {
         position: fixed;
         top: 0; left: 0;
@@ -239,102 +350,6 @@
         opacity: 1;
         transform: translate(-50%, -10px);
     }
-    
-    .conversation-block .content {
-        box-shadow: 0 4px 10px var(--shadow-color);
-        margin-top: 1rem;
-        transition: box-shadow 0.3s;
-    }
-
-    /* Neo Mode specific Content Glow */
-    [data-mode="neo"] .conversation-block .content {
-        box-shadow: 0 0 10px rgba(0, 255, 0, 0.6), 
-                    0 0 20px rgba(0, 255, 0, 0.4), 
-                    inset 0 0 5px rgba(0, 255, 0, 0.3);
-    }
-    
-    /* --- History Panel Styles --- */
-    #historyPanel {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 300px;
-        max-width: 80vw;
-        background-color: var(--modal-bg);
-        border-right: 1px solid var(--border-color);
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-        transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
-        z-index: 999;
-        display: flex;
-        flex-direction: column;
-    }
-    #historyPanel.open {
-        transform: translateX(0);
-    }
-
-    .history-header {
-        padding: 1rem;
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .history-header h2 {
-        margin: 0;
-        font-size: 1.2rem;
-        color: var(--accent-color);
-    }
-    .history-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-    .history-actions button {
-        background: none;
-        border: 1px solid var(--accent-color);
-        color: var(--accent-color);
-        font-size: 0.9rem;
-        padding: 0.25rem 0.5rem;
-        cursor: pointer;
-        border-radius: 4px;
-    }
-    .close-history {
-        background: none;
-        border: none;
-        color: var(--accent-color);
-        font-size: 1.5rem;
-        cursor: pointer;
-    }
-
-    #historyList {
-        flex-grow: 1;
-        overflow-y: auto;
-        padding: 1rem 0;
-    }
-    .history-item {
-        padding: 0.75rem 1rem;
-        cursor: pointer;
-        border-bottom: 1px dashed var(--border-color);
-        font-size: 0.9rem;
-        transition: background-color 0.2s;
-    }
-    .history-item:hover {
-        background-color: rgba(var(--accent-color-rgb), 0.1);
-    }
-    .history-item p {
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 700;
-    }
-    .history-item small {
-        color: var(--secondary-text);
-        font-size: 0.75rem;
-        display: block;
-        margin-top: 2px;
-    }
 </style>
 </head>
 <body data-mode="silvery">
@@ -353,17 +368,23 @@
         </div>
         <button class="history-toggle" id="historyToggle">History</button>
     </div>
-    <!-- Removed authStatus as the app is now local-only -->
 </div>
 
 <!-- History Panel -->
 <div id="historyPanel">
     <div class="history-header">
-        <h2>Local History</h2>
-        <div class="history-actions">
-            <button onclick="clearLocalHistory()">Clear All</button>
+        <div class="history-title-row">
+            <h2>Local History</h2>
             <button class="close-history" id="closeHistoryBtn">×</button>
         </div>
+        <div class="history-actions">
+            <button onclick="exportHistoryToFile()">Export</button>
+            <!-- Trigger the hidden file input -->
+            <button onclick="document.getElementById('importFile').click()">Import</button>
+            <button onclick="clearLocalHistory()">Clear All</button>
+        </div>
+        <!-- Hidden file input for import -->
+        <input type="file" id="importFile" accept=".json" style="display:none;">
     </div>
     <div id="historyList">
         <!-- History items loaded here -->
@@ -416,6 +437,7 @@ const historyPanel = document.getElementById('historyPanel');
 const historyToggle = document.getElementById('historyToggle');
 const closeHistoryBtn = document.getElementById('closeHistoryBtn');
 const historyList = document.getElementById('historyList');
+const importFile = document.getElementById('importFile');
 
 
 // --- Local Storage Utilities ---
@@ -475,20 +497,21 @@ function displayLocalHistoryInPanel() {
         item.className = 'history-item';
         item.dataset.sessionId = session.id;
         
-        const date = new Date(session.timestamp).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+        // Ensure timestamp is a number for conversion
+        const timestamp = typeof session.timestamp === 'string' ? new Date(session.timestamp).getTime() : session.timestamp;
+        const date = new Date(timestamp).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 
         item.innerHTML = `
             <p title="${session.initialQuery}">${session.initialQuery}</p>
             <small>${date} • ${session.turns?.length || 1} turns</small>
         `;
-        // Use a function that gets the session data from memory rather than Firestore
         item.addEventListener('click', () => loadLocalHistoryItem(session.id));
         historyList.appendChild(item);
     });
 }
 
 /**
- * Clears all local history data.
+ * Clears all local history data after a confirmation.
  */
 function clearLocalHistory() {
     if(confirm("Are you sure you want to delete all locally saved truth sessions? This cannot be undone.")) {
@@ -512,7 +535,7 @@ function loadLocalHistoryItem(sessionId) {
     }
 
     closeModal();
-    historyPanel.classList.remove('open');
+    toggleHistoryPanel(); // Close history panel
     openModal();
     resultContainer.innerHTML = ''; // Clear previous content
 
@@ -542,27 +565,46 @@ function loadLocalHistoryItem(sessionId) {
     resultContainer.scrollTo(0, resultContainer.scrollHeight);
 }
 
-// --- Mode Functions, Modal Functions, etc. (Retained from original code) ---
+/**
+ * Exports the entire local history as a downloadable JSON file.
+ */
+function exportHistoryToFile() {
+    loadLocalHistoryFromStorage(); // Ensure state is synced
+    if (localHistory.length === 0) {
+        return showMessage("No history to export.", 3000);
+    }
+    
+    try {
+        const dataStr = JSON.stringify(localHistory, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        
+        // Create a temporary link element
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        a.href = url;
+        const timestamp = new Date().toISOString().slice(0, 10);
+        a.download = `truth_engine_history_${timestamp}.json`;
+        
+        // Simulate click and cleanup
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showMessage("History exported successfully!", 3000);
+    } catch (e) {
+        console.error("Error exporting history:", e);
+        showMessage("Export failed due to file or storage error.", 4000);
+    }
+}
+
+
+// --- Mode Functions, Modal Functions, etc. ---
 function setMode(mode){
     if(mode==='silvery'){ body.setAttribute('data-mode',''); } 
     else { body.setAttribute('data-mode', mode); }
-    // Update the RGB variable for history panel hover effect
-    const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color');
-    const rgb = hexToRgb(accentColor);
-    document.documentElement.style.setProperty('--accent-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
 }
-
-function hexToRgb(hex) {
-  const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-  hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : { r: 0, g: 0, b: 0 };
-}
-
 
 function openModal(){ modalOverlay.classList.add('active'); }
 function closeModal(){ 
@@ -612,7 +654,7 @@ function readAnalysisAloud(){
     setTimeout(()=>{window.speechSynthesis.speak(utterance);},100);
 }
 
-// --- Query Function (UPDATED for Local Storage persistence) ---
+// --- Query Function (Local Storage persistence) ---
 async function performTruthQuery(query, isFollowUp=false){
     if(!query) return;
     
@@ -668,7 +710,7 @@ async function performTruthQuery(query, isFollowUp=false){
             query: query,
             answer: data.answer || '',
             citations: data.citations || [],
-            timestamp: new Date().toISOString(),
+            timestamp: Date.now(),
             isFollowUp: isFollowUp
         };
         
@@ -720,22 +762,17 @@ queryInput.addEventListener('keypress', e=>{
         const query = queryInput.value.trim();
         if (query === '') return;
         
-        // Check if the query starts with the follow-up marker
         const isFollowUp = query.includes('→');
         
-        // If it's a new query and we had a session active, start a new one
-        if (!isFollowUp && currentSessionId) {
-             currentSessionId = null; 
-        } else if (isFollowUp && lastQuery && query.startsWith(lastQuery + ' →')) {
-            // Clean up the input value for the API call 
+        // Logic to handle follow-up queries and new queries
+        if (isFollowUp && lastQuery && query.startsWith(lastQuery + ' →')) {
             const followUpQuery = query.substring(lastQuery.length + 3).trim(); 
             performTruthQuery(followUpQuery, true);
         } else if (isFollowUp && !currentSessionId) {
-            // Error handling for follow-up without a current session
             showMessage("Cannot follow up without an active or loaded session.", 3000);
             return;
         } else {
-            // Fresh query
+            // Fresh query (resets currentSessionId internally)
             performTruthQuery(query, false);
         }
         
@@ -755,12 +792,60 @@ followUpBtn.addEventListener('click', ()=>{
     queryInput.focus();
 });
 
-// History Panel Toggle
-historyToggle.addEventListener('click', () => {
-    loadLocalHistoryFromStorage(); // Ensure the latest data is loaded before opening
-    historyPanel.classList.add('open');
+
+/**
+ * Toggles the history panel open or closed.
+ */
+function toggleHistoryPanel() {
+    if (historyPanel.classList.contains('open')) {
+        historyPanel.classList.remove('open');
+    } else {
+        loadLocalHistoryFromStorage();
+        displayLocalHistoryInPanel(); // Render the content before showing
+        historyPanel.classList.add('open');
+    }
+}
+
+// History Panel Toggle (both buttons now use the toggle function)
+historyToggle.addEventListener('click', toggleHistoryPanel);
+closeHistoryBtn.addEventListener('click', toggleHistoryPanel);
+
+
+// Handle History Import via hidden file input
+importFile.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            
+            // Basic validation: Check if it's an array of objects that look like sessions
+            if (!Array.isArray(importedData) || importedData.length === 0 || 
+                !importedData.every(item => typeof item === 'object' && item.id && Array.isArray(item.turns))) {
+                throw new Error("Invalid file structure. File must contain a list of truth sessions.");
+            }
+            
+            // Overwrite local storage and update state
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(importedData));
+            
+            // Reload all state and UI
+            loadLocalHistoryFromStorage();
+            displayLocalHistoryInPanel();
+            
+            showMessage(`Successfully imported ${importedData.length} sessions!`, 4000);
+            toggleHistoryPanel(); 
+        } catch (error) {
+            console.error("Error importing file:", error);
+            showMessage(`Import failed: ${error.message}`, 5000);
+        }
+    };
+    reader.readAsText(file);
+    // Clear the input value so the same file can be loaded again
+    event.target.value = null; 
 });
-closeHistoryBtn.addEventListener('click', () => historyPanel.classList.remove('open'));
+
 
 // Initialize query from URL and start typing animation
 window.addEventListener('load', ()=>{
@@ -768,7 +853,6 @@ window.addEventListener('load', ()=>{
     setMode(body.getAttribute('data-mode')); 
     
     loadLocalHistoryFromStorage(); // Load initial data on startup
-    displayLocalHistoryInPanel();
 
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
