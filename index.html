@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI-Nspired :: Truth Engine Interface</title>
+<title>AI-Nspired :: Local Truth Engine Interface</title>
 <meta name="description" content="ai-nspired.com • truth-engine. memory keeper. Systems that don’t forget—or flinch.">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
@@ -11,39 +11,47 @@
 
     /* --- Mode Variables --- */
     :root {
-        /* Default Silvery Mode */
+        /* Default Mode (Silvery) - Moderate Contrast */
         --bg-color: #f8f8ff;
         --text-color: #1a1a1a;
         --border-color: #d0d0d0;
         --modal-bg: #ffffff;
+        --content-bg: #f8f8ff;
+        --content-text: #1a1a1a;
         --accent-color: #1a2a3a;
+        --secondary-text: #6c757d;
+        --shadow-color: rgba(0,0,0,0.05);
     }
     [data-mode="dark"] {
+        /* Dark Mode - Soft Contrast (Opposite of Default) */
         --bg-color: #1a1a1a;
         --text-color: #f0f0f0;
         --border-color: #333333;
         --modal-bg: #2a2a2a;
-        --accent-color: #c7a17a;
+        --content-bg: #111111;
+        --content-text: #f0f0f0;
+        --accent-color: #c7a17a; /* Warm beige/gold accent */
+        --secondary-text: #9fa8da;
+        --shadow-color: rgba(0,0,0,0.3);
     }
-    [data-mode="light"] {
-        --bg-color: #ffffff;
-        --text-color: #111111;
-        --border-color: #ccc;
-        --modal-bg: #f9f9f9;
-        --accent-color: #1a2a3a;
-    }
-    [data-mode="mystic"] {
-        --bg-color: #0f0f2a;
-        --text-color: #e0d0ff;
-        --border-color: #5a3f9a;
-        --modal-bg: #1a0f3f;
-        --accent-color: #a17ac7;
+    [data-mode="neo"] {
+        /* Neo Mode - HIGH CONTRAST (Matrix Style) */
+        --bg-color: #000000;            /* Pure black background */
+        --text-color: #00FF00;          /* Neon green for terminal/main text */
+        --border-color: #008800;        /* Darker green border */
+        --modal-bg: #0d0d0d;            /* Near black modal frame */
+        --content-bg: #1a1a1a;          /* Very dark gray for content background */
+        --content-text: #00FF00;        /* NEON GREEN for result text */
+        --accent-color: #00FF00;        /* BRIGHT GREEN for accents/borders/buttons */
+        --secondary-text: #00AA00;      /* Slightly darker green for headers/secondary text */
+        --shadow-color: transparent;
     }
 
     body {
         margin: 0;
-        padding: 2rem;
+        padding: 1.5rem 1rem;
         font-family: 'Crimson Pro', serif;
+        font-size: 1.1rem;
         background-color: var(--bg-color);
         color: var(--text-color);
         display: flex;
@@ -52,6 +60,11 @@
         min-height: 100vh;
         box-sizing: border-box;
         transition: background-color 0.3s, color 0.3s;
+        width: 100%;
+        position: relative; /* For the history panel */
+    }
+    @media (max-width: 600px) {
+        body { padding: 1rem 0.5rem; }
     }
 
     .terminal-window {
@@ -60,25 +73,40 @@
         text-align: left;
     }
 
+    /* TYPING EFFECT */
     .typed-text {
         font-weight: 700;
         font-size: 1.5rem;
         display: inline-block;
         overflow: hidden;
         white-space: nowrap;
+        width: 0; 
         border-right: 3px solid var(--accent-color);
-        animation: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+        animation: blink-caret .75s step-end infinite;
+    }
+    .typed-text.is-typing {
+        animation: typing 3.5s steps(40, end) forwards, blink-caret .75s step-end infinite;
+    }
+    .typed-text.is-done {
+        animation: none;
+        border-right: none; 
+        width: auto;
     }
 
     @keyframes typing { from { width: 0 } to { width: 100% } }
-    @keyframes blink-caret { 50% { border-color: var(--accent-color); } }
+    @keyframes blink-caret { 50% { border-color: transparent; } }
 
-    .command-line {
+    .input-row {
         display: flex;
         align-items: center;
         margin-top: 1rem;
+        width: 100%;
     }
-
+    .command-line {
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+    }
     .command-line::before { content: '>'; margin-right: 1rem; font-weight: bold; }
 
     .search-input {
@@ -89,6 +117,23 @@
         font-size: 1.5rem;
         flex-grow: 1;
         outline: none;
+        padding-right: 1rem;
+    }
+    .search-input:focus {
+        outline: 2px solid var(--accent-color);
+        outline-offset: 4px;
+        border-radius: 2px;
+    }
+    .history-toggle {
+        padding: 0.5rem 1rem;
+        margin-left: 1rem;
+        border: 1px solid var(--accent-color);
+        background: none;
+        color: var(--accent-color);
+        font-weight: 700;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.9rem;
     }
 
     /* --- Modal Styles --- */
@@ -103,61 +148,226 @@
         z-index: 1000;
     }
     .modal-overlay.active { display: flex; }
-
     .modal-container {
         background-color: var(--modal-bg);
         border: 1px solid var(--border-color);
         border-radius: 8px;
-        width: 90%;
+        width: 95%; 
         max-width: 900px;
-        height: 90vh;
+        height: 95vh;
         box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         display: flex;
         flex-direction: column;
-        padding: 1rem 2rem;
+        padding: 1rem 1rem;
         transition: background-color 0.3s, color 0.3s;
     }
-
     .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
     .modal-title { font-weight: 700; color: var(--accent-color); }
     .close-modal { background: none; border: none; color: var(--accent-color); font-size: 2rem; cursor: pointer; }
-
     .result-container {
-        padding: 2rem 0;
+        padding: 1rem 0;
         flex-grow: 1;
         overflow-y: auto;
         font-family: 'Crimson Pro', serif;
         color: var(--text-color);
         transition: background-color 0.3s, color 0.3s;
     }
-
-    .result-silvery { background-color: var(--bg-color); border-left: 5px solid var(--accent-color); padding: 1.5rem; line-height: 1.8; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-
     .citation-block { margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem; font-size: 0.9rem; }
     .citation-block a { color: var(--accent-color); text-decoration: none; }
     .citation-block a:hover { text-decoration: underline; }
-
     .modal-footer { display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--border-color); }
-    .modal-footer button { padding: 0.5rem 1rem; border: 1px solid var(--accent-color); background: none; color: var(--accent-color); font-weight: 700; cursor: pointer; border-radius: 4px; }
+    .modal-footer button { 
+        padding: 0.5rem 1rem; 
+        border: 1px solid var(--accent-color); 
+        background: none; 
+        color: var(--accent-color); 
+        font-weight: 700; 
+        cursor: pointer; 
+        border-radius: 4px;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .modal-footer button:focus,
+    .mode-toggle button:focus,
+    .history-toggle:focus {
+        background-color: var(--accent-color);
+        color: var(--bg-color); 
+        outline: 4px solid var(--accent-color);
+        outline-offset: -2px;
+    }
+    .mode-toggle { 
+        position: fixed; 
+        top: 1rem; 
+        right: 1rem; 
+        display: flex; 
+        gap: 0.5rem; 
+        flex-wrap: wrap;
+    }
+    .mode-toggle button { 
+        padding: 0.5rem 0.5rem;
+        cursor: pointer; 
+        border: 1px solid var(--accent-color); 
+        background: none; 
+        color: var(--accent-color); 
+        font-weight: 700; 
+        border-radius: 4px; 
+        font-size: 0.8rem;
+    }
+    @media (max-width: 600px) {
+        .mode-toggle { top: 0.5rem; right: 0.5rem; }
+    }
+    #customMessage {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--accent-color); 
+        color: var(--bg-color);
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        pointer-events: none;
+        z-index: 1001;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+    [data-mode="neo"] #customMessage {
+        color: #000000;
+    }
+    #customMessage.visible {
+        opacity: 1;
+        transform: translate(-50%, -10px);
+    }
     
-    /* --- Mode Toggle Buttons --- */
-    .mode-toggle { position: fixed; top: 1rem; right: 1rem; display: flex; gap: 0.5rem; }
-    .mode-toggle button { padding: 0.5rem 1rem; cursor: pointer; border: 1px solid var(--accent-color); background: none; color: var(--accent-color); font-weight: 700; border-radius: 4px; }
+    .conversation-block .content {
+        box-shadow: 0 4px 10px var(--shadow-color);
+        margin-top: 1rem;
+        transition: box-shadow 0.3s;
+    }
+
+    /* Neo Mode specific Content Glow */
+    [data-mode="neo"] .conversation-block .content {
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.6), 
+                    0 0 20px rgba(0, 255, 0, 0.4), 
+                    inset 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+    
+    /* --- History Panel Styles --- */
+    #historyPanel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 300px;
+        max-width: 80vw;
+        background-color: var(--modal-bg);
+        border-right: 1px solid var(--border-color);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+    }
+    #historyPanel.open {
+        transform: translateX(0);
+    }
+
+    .history-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .history-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--accent-color);
+    }
+    .history-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .history-actions button {
+        background: none;
+        border: 1px solid var(--accent-color);
+        color: var(--accent-color);
+        font-size: 0.9rem;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+    .close-history {
+        background: none;
+        border: none;
+        color: var(--accent-color);
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+
+    #historyList {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem 0;
+    }
+    .history-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px dashed var(--border-color);
+        font-size: 0.9rem;
+        transition: background-color 0.2s;
+    }
+    .history-item:hover {
+        background-color: rgba(var(--accent-color-rgb), 0.1);
+    }
+    .history-item p {
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 700;
+    }
+    .history-item small {
+        color: var(--secondary-text);
+        font-size: 0.75rem;
+        display: block;
+        margin-top: 2px;
+    }
 </style>
 </head>
 <body data-mode="silvery">
 
 <div class="mode-toggle">
-    <button onclick="setMode('silvery')">Silvery</button>
+    <button onclick="setMode('silvery')">Default</button>
     <button onclick="setMode('dark')">Dark</button>
-    <button onclick="setMode('light')">Light</button>
-    <button onclick="setMode('mystic')">Mystic</button>
+    <button onclick="setMode('neo')">Neo</button>
 </div>
 
 <div class="terminal-window">
-    <p class="typed-text">connected. truth-engine ready.</p>
-    <div class="command-line">
-        <input type="text" class="search-input" id="queryInput" placeholder="Enter query..." autofocus>
+    <p class="typed-text" id="typedText">connected. truth-engine ready.</p>
+    <div class="input-row">
+        <div class="command-line">
+            <input type="text" class="search-input" id="queryInput" placeholder="Enter query..." autofocus>
+        </div>
+        <button class="history-toggle" id="historyToggle">History</button>
+    </div>
+    <!-- Removed authStatus as the app is now local-only -->
+</div>
+
+<!-- History Panel -->
+<div id="historyPanel">
+    <div class="history-header">
+        <h2>Local History</h2>
+        <div class="history-actions">
+            <button onclick="clearLocalHistory()">Clear All</button>
+            <button class="close-history" id="closeHistoryBtn">×</button>
+        </div>
+    </div>
+    <div id="historyList">
+        <!-- History items loaded here -->
+        <p style="padding: 1rem; text-align: center; color: var(--secondary-text);">Loading local sessions...</p>
     </div>
 </div>
 
@@ -167,7 +377,9 @@
             <p class="modal-title">DATA STREAM // ai-nspired</p>
             <button class="close-modal" id="close-modal">×</button>
         </div>
-        <div class="result-container" id="resultContainer"></div>
+        <div class="result-container" id="resultContainer">
+            <!-- Content will be injected here -->
+        </div>
         <div class="modal-footer" id="modalFooter">
             <button id="copyAnalysisBtn">Copy Analysis</button>
             <button id="ttsBtn">TTS (Read Aloud)</button>
@@ -176,8 +388,20 @@
     </div>
 </div>
 
+<!-- Custom Message/Toast Box -->
+<div id="customMessage"></div>
+
 <script>
+// --- Global Constants & State ---
 const API_URL = 'https://justice.ai-n.workers.dev/api/ai/truth';
+const LOCAL_STORAGE_KEY = 'LOCAL_TRUTH_HISTORY';
+const MAX_HISTORY_ITEMS = 20;
+
+let localHistory = []; // Array of session objects
+let currentSessionId = null;
+let lastQuery = ''; 
+
+// --- DOM Elements ---
 const queryInput = document.getElementById('queryInput');
 const modalOverlay = document.getElementById('modal-overlay');
 const closeModalBtn = document.getElementById('close-modal');
@@ -186,65 +410,250 @@ const copyAnalysisBtn = document.getElementById('copyAnalysisBtn');
 const ttsBtn = document.getElementById('ttsBtn');
 const followUpBtn = document.getElementById('followUpBtn');
 const body = document.body;
+const customMessage = document.getElementById('customMessage');
+const typedTextEl = document.getElementById('typedText');
+const historyPanel = document.getElementById('historyPanel');
+const historyToggle = document.getElementById('historyToggle');
+const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+const historyList = document.getElementById('historyList');
 
-let lastQuery = '';
 
-// --- Mode Functions ---
+// --- Local Storage Utilities ---
+
+/**
+ * Loads the history array from localStorage into the global 'localHistory' state.
+ */
+function loadLocalHistoryFromStorage() {
+    try {
+        const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (storedData) {
+            localHistory = JSON.parse(storedData);
+        } else {
+            localHistory = [];
+        }
+    } catch (e) {
+        console.error("Error loading local storage history:", e);
+        showMessage("Error accessing local history.", 3000);
+        localHistory = [];
+    }
+}
+
+/**
+ * Saves the global 'localHistory' state back to localStorage, limiting the size.
+ */
+function saveLocalHistoryToStorage() {
+    // Sort by timestamp (newest first) before saving
+    localHistory.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Cap the history list size
+    if (localHistory.length > MAX_HISTORY_ITEMS) {
+        localHistory = localHistory.slice(0, MAX_HISTORY_ITEMS);
+    }
+    
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localHistory));
+        displayLocalHistoryInPanel(); // Refresh the visible panel immediately
+    } catch (e) {
+        console.error("Error saving local storage history:", e);
+        showMessage("Local storage is full or disabled. Cannot save new session.", 4000);
+    }
+}
+
+/**
+ * Renders the history list items in the side panel.
+ */
+function displayLocalHistoryInPanel() {
+    historyList.innerHTML = '';
+    
+    if (localHistory.length === 0) {
+        historyList.innerHTML = `<p style="padding: 1rem; text-align: center; color: var(--secondary-text);">No local sessions saved yet.</p>`;
+        return;
+    }
+
+    localHistory.forEach(session => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.dataset.sessionId = session.id;
+        
+        const date = new Date(session.timestamp).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+
+        item.innerHTML = `
+            <p title="${session.initialQuery}">${session.initialQuery}</p>
+            <small>${date} • ${session.turns?.length || 1} turns</small>
+        `;
+        // Use a function that gets the session data from memory rather than Firestore
+        item.addEventListener('click', () => loadLocalHistoryItem(session.id));
+        historyList.appendChild(item);
+    });
+}
+
+/**
+ * Clears all local history data.
+ */
+function clearLocalHistory() {
+    if(confirm("Are you sure you want to delete all locally saved truth sessions? This cannot be undone.")) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        localHistory = [];
+        currentSessionId = null;
+        displayLocalHistoryInPanel();
+        showMessage("Local history successfully cleared.", 3000);
+    }
+}
+
+/**
+ * Finds a session by ID and loads its content into the modal.
+ * @param {string} sessionId - The unique ID of the session to load.
+ */
+function loadLocalHistoryItem(sessionId) {
+    const sessionData = localHistory.find(s => s.id === sessionId);
+
+    if (!sessionData) {
+        return showMessage("Local session not found.", 3000);
+    }
+
+    closeModal();
+    historyPanel.classList.remove('open');
+    openModal();
+    resultContainer.innerHTML = ''; // Clear previous content
+
+    currentSessionId = sessionId;
+    lastQuery = sessionData.initialQuery;
+
+    sessionData.turns.forEach((turn, index) => {
+        const isInitial = index === 0;
+        const queryLabel = isInitial ? `Initial Query: "${turn.query}"` : `Follow-up ${index} on "${sessionData.initialQuery}"`;
+        const responseLabel = isInitial ? `Response 1 (Initial)` : `Response ${index + 1} (Follow-up)`;
+
+        let htmlContent = turn.answer ? marked.parse(turn.answer) : '<p>No results found.</p>';
+        if(turn.citations?.length){
+            htmlContent += `<div class="citation-block"><h3>Sources</h3><ul>${turn.citations.map(c=>`<li><a href="${c.uri}" target="_blank">${c.title || c.uri}</a></li>`).join('')}</ul></div>`;
+        }
+
+        const finalBlock = `
+            <div class="conversation-block">
+                <h4>${queryLabel}</h4>
+                <div class="content">
+                    <h4 style="color: var(--secondary-text);">${responseLabel}</h4>
+                    ${htmlContent}
+                </div>
+            </div>`;
+        resultContainer.innerHTML += finalBlock;
+    });
+    resultContainer.scrollTo(0, resultContainer.scrollHeight);
+}
+
+// --- Mode Functions, Modal Functions, etc. (Retained from original code) ---
 function setMode(mode){
     if(mode==='silvery'){ body.setAttribute('data-mode',''); } 
     else { body.setAttribute('data-mode', mode); }
+    // Update the RGB variable for history panel hover effect
+    const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color');
+    const rgb = hexToRgb(accentColor);
+    document.documentElement.style.setProperty('--accent-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
 }
 
-// --- Modal Functions ---
-function openModal(){ modalOverlay.classList.add('active'); }
-function closeModal(){ modalOverlay.classList.remove('active'); }
+function hexToRgb(hex) {
+  const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+  hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 0, g: 0, b: 0 };
+}
 
-// --- Utility Functions ---
-function chooseStyleForQuery(){ return 'silvery'; }
+
+function openModal(){ modalOverlay.classList.add('active'); }
+function closeModal(){ 
+    modalOverlay.classList.remove('active'); 
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        ttsBtn.innerText='TTS (Read Aloud)';
+    }
+}
+
+function showMessage(message, duration=2000){
+    customMessage.innerText = message;
+    customMessage.classList.add('visible');
+    setTimeout(() => {
+        customMessage.classList.remove('visible');
+    }, duration);
+}
 
 function copyAnalysisToClipboard(){
-    document.execCommand('copy', false, resultContainer.innerText); // using execCommand for broader compatibility in iframes
-    copyAnalysisBtn.innerText='COPIED!';
-    setTimeout(()=>copyAnalysisBtn.innerText='Copy Analysis',2000);
+    document.execCommand('copy', false, resultContainer.innerText);
+    showMessage('Analysis Copied to Clipboard!');
 }
 
 function readAnalysisAloud(){
-    if('speechSynthesis' in window){
-        if(window.speechSynthesis.speaking){ 
-            window.speechSynthesis.cancel(); 
-            ttsBtn.innerText='TTS (Stopped)'; 
-            setTimeout(()=>ttsBtn.innerText='TTS (Read Aloud)',1000); 
-            return; 
-        }
-        const utterance = new SpeechSynthesisUtterance(resultContainer.innerText.replace(/(\n|\t)/g,' '));
-        utterance.rate=1.1;
-        ttsBtn.innerText='TTS (Speaking...)';
-        utterance.onend=()=>{ttsBtn.innerText='TTS (Read Aloud)';}
-        // Using setTimeout to ensure the utterance starts after a minimal delay
-        setTimeout(()=>{window.speechSynthesis.speak(utterance);},100);
-    } else console.error('Text-to-Speech not supported.');
+    if(!('speechSynthesis' in window)){ 
+        showMessage('Text-to-Speech not supported in this browser.');
+        return; 
+    }
+    
+    if(window.speechSynthesis.speaking){ 
+        window.speechSynthesis.cancel(); 
+        ttsBtn.innerText='TTS (Stopped)'; 
+        setTimeout(()=>ttsBtn.innerText='TTS (Read Aloud)',1000); 
+        return; 
+    }
+    
+    const conversationText = Array.from(resultContainer.querySelectorAll('.content')).map(el => el.innerText).join('\n---\n');
+    
+    const utterance = new SpeechSynthesisUtterance(conversationText.replace(/(\n|\t)/g,' '));
+    utterance.rate=1.1;
+    ttsBtn.innerText='TTS (Speaking...)';
+    
+    utterance.onend=()=>{
+        ttsBtn.innerText='TTS (Read Aloud)';
+        showMessage('Read-aloud complete.');
+    }
+    setTimeout(()=>{window.speechSynthesis.speak(utterance);},100);
 }
 
-// --- Query Function ---
+// --- Query Function (UPDATED for Local Storage persistence) ---
 async function performTruthQuery(query, isFollowUp=false){
     if(!query) return;
+    
+    let queryCount = 1;
+    let sessionToUpdate;
 
-    // Only store the query as the root topic if it's the initial (non-follow-up) question.
-    if (!isFollowUp) {
-        lastQuery = query; // store only the original query
+    if (!isFollowUp || !currentSessionId) {
+        // Start a NEW session
+        lastQuery = query; 
+        currentSessionId = crypto.randomUUID();
+        sessionToUpdate = {
+            id: currentSessionId,
+            initialQuery: query,
+            timestamp: Date.now(),
+            turns: []
+        };
+        localHistory.unshift(sessionToUpdate); // Add new session to the beginning
+    } else {
+        // Continue an existing session
+        sessionToUpdate = localHistory.find(s => s.id === currentSessionId);
+        if (!sessionToUpdate) {
+            return showMessage("Error: Follow-up failed. Session not found locally.", 4000);
+        }
+        queryCount = sessionToUpdate.turns.length + 1;
     }
 
     openModal();
     
-    // Add loading indicator for all queries, but only clear the container for new, initial queries
-    if(!isFollowUp){
-        resultContainer.innerHTML='<p>⚡ Scanning truth matrix...</p>';
-        resultContainer.className='result-container';
-    } else {
-        // Append a temporary loading message for follow-ups
-        resultContainer.innerHTML += `<hr><p>⚡ Scanning truth matrix for follow-up...</p>`;
-        resultContainer.scrollTo(0, resultContainer.scrollHeight); // scroll to bottom for follow-up
-    }
+    const tempLoadingId = `loading-${Date.now()}`;
+    const queryLabel = isFollowUp ? `Follow-up ${queryCount} on "${lastQuery}"` : `Initial Query: "${query}"`;
+
+    const loadingHtml = `
+        <div class="conversation-block" id="${tempLoadingId}">
+            <h4>${queryLabel}</h4>
+            <div class="content">
+                <p>⚡ Scanning truth matrix...</p>
+            </div>
+        </div>`;
+
+    resultContainer.innerHTML += loadingHtml;
+    resultContainer.scrollTo(0, resultContainer.scrollHeight); 
 
     try{
         const res = await fetch(API_URL,{
@@ -254,27 +663,54 @@ async function performTruthQuery(query, isFollowUp=false){
         });
         if(!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
-        const chosenStyle = chooseStyleForQuery();
-        resultContainer.className='result-container result-'+chosenStyle;
+        
+        const newTurn = {
+            query: query,
+            answer: data.answer || '',
+            citations: data.citations || [],
+            timestamp: new Date().toISOString(),
+            isFollowUp: isFollowUp
+        };
+        
+        // Add new turn to the session object in memory
+        sessionToUpdate.turns.push(newTurn);
+        
+        // Save the updated session history array back to local storage
+        saveLocalHistoryToStorage(); 
 
-        let html = data.answer ? marked.parse(data.answer) : '<p>No results found.</p>';
-        if(data.citations?.length){
-            html += `<div class="citation-block"><h3>Sources</h3><ul>${data.citations.map(c=>`<li><a href="${c.url}" target="_blank">${c.title}</a></li>`).join('')}</ul></div>`;
+        const loadingBlock = document.getElementById(tempLoadingId);
+        if(loadingBlock) loadingBlock.remove();
+
+        let htmlContent = newTurn.answer ? marked.parse(newTurn.answer) : '<p>No results found.</p>';
+        if(newTurn.citations?.length){
+            htmlContent += `<div class="citation-block"><h3>Sources</h3><ul>${newTurn.citations.map(c=>`<li><a href="${c.uri}" target="_blank">${c.title || c.uri}</a></li>`).join('')}</ul></div>`;
         }
 
-        if(isFollowUp){
-            // Remove the temporary loading message before appending the final result
-            const tempLoading = resultContainer.innerHTML.lastIndexOf('<hr><p>⚡');
-            if(tempLoading !== -1){
-                resultContainer.innerHTML = resultContainer.innerHTML.substring(0, tempLoading);
-            }
-            resultContainer.innerHTML += `<hr>` + html; // append for follow-up
-            resultContainer.scrollTo(0, resultContainer.scrollHeight); // scroll to show new result
-        } else {
-            resultContainer.innerHTML = html; // replace for initial query
-        }
+        const finalBlock = `
+            <div class="conversation-block">
+                <h4>${isFollowUp ? `Response ${queryCount} (Follow-up)` : `Response ${queryCount} (Initial)`}</h4>
+                <div class="content">
+                    ${htmlContent}
+                </div>
+            </div>`;
+        
+        resultContainer.innerHTML += finalBlock;
+        resultContainer.scrollTo(0, resultContainer.scrollHeight);
+
     } catch(err){
-        resultContainer.innerHTML=`<h3>System Error</h3><p>${err.message}</p>`;
+        const loadingBlock = document.getElementById(tempLoadingId);
+        if(loadingBlock) loadingBlock.remove();
+        
+        resultContainer.innerHTML += `
+            <div class="conversation-block">
+                <h4>System Error</h4>
+                <div class="content" style="border-left-color: red; color: red;">
+                    <h3>System Error</h3><p>Query failed: ${err.message}</p>
+                </div>
+            </div>`;
+        resultContainer.scrollTo(0, resultContainer.scrollHeight); 
+        console.error("API Error:", err);
+        showMessage("Query failed.", 3000);
     }
 }
 
@@ -282,12 +718,28 @@ async function performTruthQuery(query, isFollowUp=false){
 queryInput.addEventListener('keypress', e=>{
     if(e.key==='Enter'){
         const query = queryInput.value.trim();
+        if (query === '') return;
+        
+        // Check if the query starts with the follow-up marker
         const isFollowUp = query.includes('→');
         
-        // UX Improvement: Clear the input after submission
+        // If it's a new query and we had a session active, start a new one
+        if (!isFollowUp && currentSessionId) {
+             currentSessionId = null; 
+        } else if (isFollowUp && lastQuery && query.startsWith(lastQuery + ' →')) {
+            // Clean up the input value for the API call 
+            const followUpQuery = query.substring(lastQuery.length + 3).trim(); 
+            performTruthQuery(followUpQuery, true);
+        } else if (isFollowUp && !currentSessionId) {
+            // Error handling for follow-up without a current session
+            showMessage("Cannot follow up without an active or loaded session.", 3000);
+            return;
+        } else {
+            // Fresh query
+            performTruthQuery(query, false);
+        }
+        
         queryInput.value = '';
-
-        performTruthQuery(query, isFollowUp);
     }
 });
 
@@ -297,19 +749,44 @@ copyAnalysisBtn.addEventListener('click',copyAnalysisToClipboard);
 ttsBtn.addEventListener('click',readAnalysisAloud);
 
 followUpBtn.addEventListener('click', ()=>{
-    // FIX: Close the modal immediately so the input field becomes accessible.
     closeModal(); 
-    
-    queryInput.focus();
-    // Use the stored root query for the follow-up prompt
+    // Start the follow-up input with the previous query prefix
     queryInput.value = lastQuery ? lastQuery + ' → ' : '';
+    queryInput.focus();
 });
 
-// Initialize query from URL
+// History Panel Toggle
+historyToggle.addEventListener('click', () => {
+    loadLocalHistoryFromStorage(); // Ensure the latest data is loaded before opening
+    historyPanel.classList.add('open');
+});
+closeHistoryBtn.addEventListener('click', () => historyPanel.classList.remove('open'));
+
+// Initialize query from URL and start typing animation
 window.addEventListener('load', ()=>{
+    // Initialize color mode for the history panel hover effect
+    setMode(body.getAttribute('data-mode')); 
+    
+    loadLocalHistoryFromStorage(); // Load initial data on startup
+    displayLocalHistoryInPanel();
+
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
-    if(q){ queryInput.value = decodeURIComponent(q.replace(/\+/g,' ')); performTruthQuery(queryInput.value); }
+    if(q){ 
+        queryInput.value = decodeURIComponent(q.replace(/\+/g,' ')).trim(); 
+        performTruthQuery(queryInput.value); 
+        queryInput.value = '';
+    }
+    
+    // Start the typing animation
+    typedTextEl.classList.add('is-typing');
+
+    typedTextEl.addEventListener('animationend', (e) => {
+        if (e.animationName === 'typing') {
+            typedTextEl.classList.remove('is-typing');
+            typedTextEl.classList.add('is-done');
+        }
+    }, { once: true });
 });
 </script>
 </body>
