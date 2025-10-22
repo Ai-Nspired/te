@@ -64,7 +64,7 @@
         box-sizing: border-box;
         transition: background-color 0.3s, color 0.3s;
         width: 100%;
-        position: relative; /* For the history panel */
+        position: relative; 
     }
     @media (max-width: 600px) {
         body { padding: 1rem 0.5rem; }
@@ -138,116 +138,8 @@
         border-radius: 4px;
         font-size: 0.9rem;
     }
-    /* ... existing modal, result, and conversation block styles ... */
-    
-    .conversation-block .content {
-        box-shadow: 0 4px 10px var(--shadow-color);
-        margin-top: 1rem;
-        transition: box-shadow 0.3s;
-    }
 
-    /* Neo Mode specific Content Glow */
-    [data-mode="neo"] .conversation-block .content {
-        box-shadow: 0 0 10px rgba(0, 255, 0, 0.6), 
-                    0 0 20px rgba(0, 255, 0, 0.4), 
-                    inset 0 0 5px rgba(0, 255, 0, 0.3);
-    }
-    
-    /* --- History Panel Styles --- */
-    #historyPanel {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 300px;
-        max-width: 80vw;
-        background-color: var(--modal-bg);
-        border-right: 1px solid var(--border-color);
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-        transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
-        z-index: 999;
-        display: flex;
-        flex-direction: column;
-    }
-    #historyPanel.open {
-        transform: translateX(0);
-    }
-
-    .history-header {
-        padding: 1rem;
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        flex-direction: column; /* Stack header elements */
-        gap: 0.75rem;
-    }
-    .history-title-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .history-header h2 {
-        margin: 0;
-        font-size: 1.2rem;
-        color: var(--accent-color);
-    }
-    .history-actions {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    .history-actions button {
-        background: none;
-        border: 1px solid var(--accent-color);
-        color: var(--accent-color);
-        font-size: 0.8rem;
-        padding: 0.25rem 0.5rem;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: background-color 0.2s, color 0.2s;
-    }
-    .history-actions button:hover {
-        background-color: var(--accent-color);
-        color: var(--bg-color);
-    }
-    .close-history {
-        background: none;
-        border: none;
-        color: var(--accent-color);
-        font-size: 1.5rem;
-        cursor: pointer;
-    }
-
-    #historyList {
-        flex-grow: 1;
-        overflow-y: auto;
-        padding: 1rem 0;
-    }
-    .history-item {
-        padding: 0.75rem 1rem;
-        cursor: pointer;
-        border-bottom: 1px dashed var(--border-color);
-        font-size: 0.9rem;
-        transition: background-color 0.2s;
-    }
-    .history-item:hover {
-        /* Use the CSS variable for dynamic hover color */
-        background-color: rgba(var(--accent-color-rgb), 0.1); 
-    }
-    .history-item p {
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 700;
-    }
-    .history-item small {
-        color: var(--secondary-text);
-        font-size: 0.75rem;
-        display: block;
-        margin-top: 2px;
-    }
-    /* --- Other styles (omitted for brevity) remain the same --- */
+    /* --- General Modal/Overlay Styles --- */
     .modal-overlay {
         position: fixed;
         top: 0; left: 0;
@@ -257,6 +149,7 @@
         justify-content: center;
         align-items: center;
         z-index: 1000;
+        padding: 1rem;
     }
     .modal-overlay.active { display: flex; }
     .modal-container {
@@ -286,7 +179,13 @@
     .citation-block { margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem; font-size: 0.9rem; }
     .citation-block a { color: var(--accent-color); text-decoration: none; }
     .citation-block a:hover { text-decoration: underline; }
-    .modal-footer { display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+    .modal-footer { 
+        display: flex; 
+        gap: 1rem; 
+        justify-content: space-between; 
+        padding-top: 1rem; 
+        border-top: 1px solid var(--border-color); 
+    }
     .modal-footer button { 
         padding: 0.5rem 1rem; 
         border: 1px solid var(--accent-color); 
@@ -350,9 +249,201 @@
         opacity: 1;
         transform: translate(-50%, -10px);
     }
+    
+    .conversation-block .content {
+        box-shadow: 0 4px 10px var(--shadow-color);
+        margin-top: 1rem;
+        transition: box-shadow 0.3s;
+    }
+
+    /* Neo Mode specific Content Glow */
+    [data-mode="neo"] .conversation-block .content {
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.6), 
+                    0 0 20px rgba(0, 255, 0, 0.4), 
+                    inset 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+    
+    /* --- History Panel Styles --- */
+    #historyPanel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 300px;
+        max-width: 80vw;
+        background-color: var(--modal-bg);
+        border-right: 1px solid var(--border-color);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+    }
+    #historyPanel.open {
+        transform: translateX(0);
+    }
+
+    .history-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column; 
+        gap: 0.75rem;
+    }
+    .history-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .history-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--accent-color);
+    }
+    .history-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .history-actions button {
+        background: none;
+        border: 1px solid var(--accent-color);
+        color: var(--accent-color);
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .history-actions button:hover {
+        background-color: var(--accent-color);
+        color: var(--bg-color);
+    }
+    .close-history {
+        background: none;
+        border: none;
+        color: var(--accent-color);
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+
+    #historyList {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem 0;
+    }
+    .history-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px dashed var(--border-color);
+        font-size: 0.9rem;
+        transition: background-color 0.2s;
+    }
+    .history-item:hover {
+        background-color: rgba(var(--accent-color-rgb), 0.1); 
+    }
+    .history-item-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .history-item-text {
+        flex-grow: 1;
+        overflow: hidden;
+        cursor: pointer; /* Enable click on text to load session */
+    }
+    .history-item-text p {
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 700;
+    }
+    .history-item-text small {
+        color: var(--secondary-text);
+        font-size: 0.75rem;
+        display: block;
+        margin-top: 2px;
+    }
+    .copy-query-btn {
+        background: none;
+        border: none;
+        color: var(--secondary-text);
+        cursor: pointer;
+        padding: 0.25rem;
+        font-size: 1rem;
+        line-height: 1;
+        transition: color 0.2s;
+        flex-shrink: 0;
+    }
+    .copy-query-btn:hover {
+        color: var(--accent-color);
+    }
 </style>
 </head>
 <body data-mode="silvery">
+
+<!-- 1. Melody Lock Output Modal (For Sharing) -->
+<div id="melodyLockOutputModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 500px; height: auto;">
+        <div class="modal-header">
+            <p class="modal-title">🔐 MELODY LOCK ENCRYPTED HASH</p>
+            <button class="close-modal" onclick="document.getElementById('melodyLockOutputModal').classList.remove('active');">×</button>
+        </div>
+        <div class="result-container" style="padding: 1rem 0;">
+            <p class="text-xs text-gray-500 mb-4" style="font-size: 0.85rem; color: var(--secondary-text);">
+                This encrypted hash contains the active session. Copy and share it securely.
+            </p>
+            <textarea id="encryptedOutput" readonly rows="8" style="width:100%; resize: none; border: 1px solid var(--border-color); background: var(--content-bg); color: var(--content-text); padding: 0.5rem; font-size: 0.8rem;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button onclick="copyEncryptedCode()">Copy Generated Hash</button>
+        </div>
+    </div>
+</div>
+<!-- END Melody Lock Output Modal -->
+
+<!-- 2. Melody Lock Input Modal (For Loading Hash) -->
+<div id="melodyLockInputModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 500px; height: auto;">
+        <div class="modal-header">
+            <p class="modal-title">🔓 LOAD MELODY LOCK HASH</p>
+            <button class="close-modal" onclick="document.getElementById('melodyLockInputModal').classList.remove('active');">×</button>
+        </div>
+        <div class="result-container" style="padding: 1rem 0;">
+            <p style="font-size: 0.85rem; color: var(--secondary-text); margin-bottom: 1rem;">
+                Paste a received Melody Lock code to decrypt and load a session.
+            </p>
+            <textarea id="hashInput" rows="8" placeholder="Paste Melody Lock Hash here..." style="width:100%; resize: none; border: 1px solid var(--border-color); background: var(--content-bg); color: var(--content-text); padding: 0.5rem; font-size: 0.8rem;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button onclick="loadHashFromInput()">Load Hash</button>
+        </div>
+    </div>
+</div>
+<!-- END Melody Lock Input Modal -->
+
+<!-- 3. Custom Confirmation Modal -->
+<div id="clearConfirmModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 400px; height: auto;">
+        <div class="modal-header">
+            <p class="modal-title" style="color: red;">! DANGER: CLEAR HISTORY</p>
+            <button class="close-modal" onclick="document.getElementById('clearConfirmModal').classList.remove('active');">×</button>
+        </div>
+        <div class="result-container" style="padding: 1rem 0 0;">
+            <p>
+                Are you sure you want to delete <strong style="color: red;">ALL</strong> locally saved truth sessions? This action cannot be undone.
+            </p>
+        </div>
+        <div class="modal-footer" style="justify-content: flex-end;">
+            <button onclick="document.getElementById('clearConfirmModal').classList.remove('active');" style="color: var(--secondary-text); border-color: var(--secondary-text);">Cancel</button>
+            <button onclick="confirmClearHistory()" style="background-color: red; color: white; border-color: red;">Confirm Delete</button>
+        </div>
+    </div>
+</div>
+<!-- END Custom Confirmation Modal -->
+
 
 <div class="mode-toggle">
     <button onclick="setMode('silvery')">Default</button>
@@ -379,15 +470,14 @@
         </div>
         <div class="history-actions">
             <button onclick="exportHistoryToFile()">Export</button>
-            <!-- Trigger the hidden file input -->
-            <button onclick="document.getElementById('importFile').click()">Import</button>
-            <button onclick="clearLocalHistory()">Clear All</button>
+            <button onclick="document.getElementById('melodyLockInputModal').classList.add('active')">Load Hash</button>
+            <button onclick="document.getElementById('importFile').click()">Import File</button>
+            <button onclick="promptClearHistory()">Clear All</button>
         </div>
         <!-- Hidden file input for import -->
         <input type="file" id="importFile" accept=".json" style="display:none;">
     </div>
     <div id="historyList">
-        <!-- History items loaded here -->
         <p style="padding: 1rem; text-align: center; color: var(--secondary-text);">Loading local sessions...</p>
     </div>
 </div>
@@ -402,7 +492,7 @@
             <!-- Content will be injected here -->
         </div>
         <div class="modal-footer" id="modalFooter">
-            <button id="copyAnalysisBtn">Copy Analysis</button>
+            <button id="encryptAndShareBtn">🔐 Generate Hash (Melody Lock)</button>
             <button id="ttsBtn">TTS (Read Aloud)</button>
             <button id="followUpBtn">Follow-Up</button>
         </div>
@@ -416,9 +506,10 @@
 // --- Global Constants & State ---
 const API_URL = 'https://justice.ai-n.workers.dev/api/ai/truth';
 const LOCAL_STORAGE_KEY = 'LOCAL_TRUTH_HISTORY';
+const MELODY_LOCK_PREFIX = 'MELODY_LOCK_V1::';
 const MAX_HISTORY_ITEMS = 20;
 
-let localHistory = []; // Array of session objects
+let localHistory = []; 
 let currentSessionId = null;
 let lastQuery = ''; 
 
@@ -427,7 +518,6 @@ const queryInput = document.getElementById('queryInput');
 const modalOverlay = document.getElementById('modal-overlay');
 const closeModalBtn = document.getElementById('close-modal');
 const resultContainer = document.getElementById('resultContainer');
-const copyAnalysisBtn = document.getElementById('copyAnalysisBtn');
 const ttsBtn = document.getElementById('ttsBtn');
 const followUpBtn = document.getElementById('followUpBtn');
 const body = document.body;
@@ -438,13 +528,62 @@ const historyToggle = document.getElementById('historyToggle');
 const closeHistoryBtn = document.getElementById('closeHistoryBtn');
 const historyList = document.getElementById('historyList');
 const importFile = document.getElementById('importFile');
+const encryptAndShareBtn = document.getElementById('encryptAndShareBtn');
 
 
-// --- Local Storage Utilities ---
+// --- Utility Functions ---
 
-/**
- * Loads the history array from localStorage into the global 'localHistory' state.
- */
+function showMessage(message, duration=2000){
+    customMessage.innerText = message;
+    customMessage.classList.add('visible');
+    setTimeout(() => {
+        customMessage.classList.remove('visible');
+    }, duration);
+}
+
+function openModal(){ modalOverlay.classList.add('active'); }
+function closeModal(){ 
+    modalOverlay.classList.remove('active'); 
+    document.getElementById('melodyLockOutputModal').classList.remove('active');
+    document.getElementById('melodyLockInputModal').classList.remove('active');
+
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        ttsBtn.innerText='TTS (Read Aloud)';
+    }
+}
+
+function setMode(mode){
+    if(mode==='silvery'){ body.setAttribute('data-mode',''); } 
+    else { body.setAttribute('data-mode', mode); }
+}
+
+function copyToClipboard(text, message = 'Copied!'){
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => showMessage(message))
+            .catch(err => {
+                console.error('Failed to copy text: ', err);
+                showMessage('Failed to copy.', 3000);
+            });
+    } else {
+        const tempInput = document.createElement('textarea');
+        tempInput.value = text;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        try {
+            document.execCommand('copy');
+            showMessage(message + ' (fallback)!');
+        } catch (err) {
+            showMessage('Copy function unavailable.', 3000);
+        }
+        document.body.removeChild(tempInput);
+    }
+}
+
+
+// --- Local Storage & History Management ---
+
 function loadLocalHistoryFromStorage() {
     try {
         const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -460,21 +599,15 @@ function loadLocalHistoryFromStorage() {
     }
 }
 
-/**
- * Saves the global 'localHistory' state back to localStorage, limiting the size.
- */
 function saveLocalHistoryToStorage() {
-    // Sort by timestamp (newest first) before saving
     localHistory.sort((a, b) => b.timestamp - a.timestamp);
-    
-    // Cap the history list size
     if (localHistory.length > MAX_HISTORY_ITEMS) {
         localHistory = localHistory.slice(0, MAX_HISTORY_ITEMS);
     }
     
     try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localHistory));
-        displayLocalHistoryInPanel(); // Refresh the visible panel immediately
+        displayLocalHistoryInPanel(); 
     } catch (e) {
         console.error("Error saving local storage history:", e);
         showMessage("Local storage is full or disabled. Cannot save new session.", 4000);
@@ -482,8 +615,32 @@ function saveLocalHistoryToStorage() {
 }
 
 /**
- * Renders the history list items in the side panel.
+ * Creates a clean Markdown block of a session segment (last turn).
+ * @param {string} sessionId 
  */
+function copySessionSegmentToClipboard(sessionId) {
+    const session = localHistory.find(s => s.id === sessionId);
+    if (!session || session.turns.length === 0) return showMessage("Session data is empty.", 3000);
+
+    const lastTurn = session.turns[session.turns.length - 1]; 
+    
+    const segmentMarkdown = `
+# TRUTH ENGINE SESSION SEGMENT
+
+---
+*Initial Query:* **${session.initialQuery.replace(/\n/g, ' ')}**
+*Last Follow-up Query:* **${lastTurn.query.replace(/\n/g, ' ')}**
+*Timestamp:* ${new Date(lastTurn.timestamp).toLocaleString()}
+
+---
+
+${lastTurn.answer || "No response content."}
+    `.trim();
+    
+    copyToClipboard(segmentMarkdown, 'Session Segment Copied as Markdown!');
+}
+
+
 function displayLocalHistoryInPanel() {
     historyList.innerHTML = '';
     
@@ -495,38 +652,57 @@ function displayLocalHistoryInPanel() {
     localHistory.forEach(session => {
         const item = document.createElement('div');
         item.className = 'history-item';
-        item.dataset.sessionId = session.id;
         
-        // Ensure timestamp is a number for conversion
         const timestamp = typeof session.timestamp === 'string' ? new Date(session.timestamp).getTime() : session.timestamp;
         const date = new Date(timestamp).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
 
         item.innerHTML = `
-            <p title="${session.initialQuery}">${session.initialQuery}</p>
-            <small>${date} • ${session.turns?.length || 1} turns</small>
+            <div class="history-item-content">
+                <div class="history-item-text">
+                    <p title="${session.initialQuery}">${session.initialQuery}</p>
+                    <small>${date} • ${session.turns?.length || 1} turns</small>
+                </div>
+                <button class="copy-query-btn" data-session-id="${session.id}" title="Copy Session Segment (Markdown)">📋</button>
+            </div>
         `;
-        item.addEventListener('click', () => loadLocalHistoryItem(session.id));
+        
+        // Listener for loading the session content (clicking on the text area)
+        const textContainer = item.querySelector('.history-item-text');
+        if (textContainer) {
+            textContainer.addEventListener('click', (e) => {
+                loadLocalHistoryItem(session.id);
+            });
+        }
+        
+        // Listener for the new copy button
+        const copyBtn = item.querySelector('.copy-query-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                copySessionSegmentToClipboard(e.currentTarget.dataset.sessionId);
+            });
+        }
+        
         historyList.appendChild(item);
     });
 }
 
 /**
- * Clears all local history data after a confirmation.
+ * Custom confirmation dialog for clearing history.
  */
-function clearLocalHistory() {
-    if(confirm("Are you sure you want to delete all locally saved truth sessions? This cannot be undone.")) {
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-        localHistory = [];
-        currentSessionId = null;
-        displayLocalHistoryInPanel();
-        showMessage("Local history successfully cleared.", 3000);
-    }
+function promptClearHistory() {
+    document.getElementById('clearConfirmModal').classList.add('active');
 }
 
-/**
- * Finds a session by ID and loads its content into the modal.
- * @param {string} sessionId - The unique ID of the session to load.
- */
+function confirmClearHistory() {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localHistory = [];
+    currentSessionId = null;
+    displayLocalHistoryInPanel();
+    showMessage("Local history successfully cleared.", 3000);
+    document.getElementById('clearConfirmModal').classList.remove('active');
+}
+
 function loadLocalHistoryItem(sessionId) {
     const sessionData = localHistory.find(s => s.id === sessionId);
 
@@ -535,16 +711,16 @@ function loadLocalHistoryItem(sessionId) {
     }
 
     closeModal();
-    toggleHistoryPanel(); // Close history panel
+    toggleHistoryPanel(); 
     openModal();
-    resultContainer.innerHTML = ''; // Clear previous content
+    resultContainer.innerHTML = ''; 
 
     currentSessionId = sessionId;
     lastQuery = sessionData.initialQuery;
 
     sessionData.turns.forEach((turn, index) => {
         const isInitial = index === 0;
-        const queryLabel = isInitial ? `Initial Query: "${turn.query}"` : `Follow-up ${index} on "${sessionData.initialQuery}"`;
+        const queryLabel = isInitial ? `Initial Query: "${turn.query}"` : `Follow-up ${index + 1} on "${sessionData.initialQuery}"`;
         const responseLabel = isInitial ? `Response 1 (Initial)` : `Response ${index + 1} (Follow-up)`;
 
         let htmlContent = turn.answer ? marked.parse(turn.answer) : '<p>No results found.</p>';
@@ -565,11 +741,8 @@ function loadLocalHistoryItem(sessionId) {
     resultContainer.scrollTo(0, resultContainer.scrollHeight);
 }
 
-/**
- * Exports the entire local history as a downloadable JSON file.
- */
 function exportHistoryToFile() {
-    loadLocalHistoryFromStorage(); // Ensure state is synced
+    loadLocalHistoryFromStorage(); 
     if (localHistory.length === 0) {
         return showMessage("No history to export.", 3000);
     }
@@ -578,7 +751,6 @@ function exportHistoryToFile() {
         const dataStr = JSON.stringify(localHistory, null, 2);
         const blob = new Blob([dataStr], { type: "application/json" });
         
-        // Create a temporary link element
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         
@@ -586,7 +758,6 @@ function exportHistoryToFile() {
         const timestamp = new Date().toISOString().slice(0, 10);
         a.download = `truth_engine_history_${timestamp}.json`;
         
-        // Simulate click and cleanup
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -599,35 +770,88 @@ function exportHistoryToFile() {
     }
 }
 
+// --- Melody Lock Encryption/Sharing ---
 
-// --- Mode Functions, Modal Functions, etc. ---
-function setMode(mode){
-    if(mode==='silvery'){ body.setAttribute('data-mode',''); } 
-    else { body.setAttribute('data-mode', mode); }
-}
+function generateHashAndDisplay() {
+    if (!currentSessionId) {
+        return showMessage("Please run a query or load a session first.", 3000);
+    }
 
-function openModal(){ modalOverlay.classList.add('active'); }
-function closeModal(){ 
-    modalOverlay.classList.remove('active'); 
-    if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-        ttsBtn.innerText='TTS (Read Aloud)';
+    const sessionData = localHistory.find(s => s.id === currentSessionId);
+    if (!sessionData) {
+        return showMessage("Active session data not found locally.", 3000);
+    }
+    
+    // The "Melody Lock" simulation using Base64 encoding
+    try {
+        const rawString = JSON.stringify(sessionData);
+        const signedString = MELODY_LOCK_PREFIX + rawString; 
+        const encryptedCode = btoa(signedString);
+
+        document.getElementById('encryptedOutput').value = encryptedCode;
+        document.getElementById('melodyLockOutputModal').classList.add('active');
+        document.getElementById('encryptedOutput').select(); 
+
+    } catch (e) {
+        console.error("Encryption failed:", e);
+        showMessage("Encryption failed due to data structure error.", 4000);
     }
 }
 
-function showMessage(message, duration=2000){
-    customMessage.innerText = message;
-    customMessage.classList.add('visible');
-    setTimeout(() => {
-        customMessage.classList.remove('visible');
-    }, duration);
+function copyEncryptedCode() {
+    const outputEl = document.getElementById('encryptedOutput');
+    copyToClipboard(outputEl.value, 'Melody Lock Hash Copied!');
 }
 
-function copyAnalysisToClipboard(){
-    document.execCommand('copy', false, resultContainer.innerText);
-    showMessage('Analysis Copied to Clipboard!');
+function loadHashFromInput() {
+    const hashInputEl = document.getElementById('hashInput');
+    const encryptedCode = hashInputEl.value.trim();
+
+    if (!encryptedCode) {
+        return showMessage("Please paste a Melody Lock Hash.", 3000);
+    }
+
+    try {
+        // Simulate Decryption
+        const signedString = atob(encryptedCode);
+        
+        if (!signedString.startsWith(MELODY_LOCK_PREFIX)) {
+            throw new Error("Invalid Melody Lock format or signature mismatch.");
+        }
+
+        const rawString = signedString.substring(MELODY_LOCK_PREFIX.length);
+        const sessionData = JSON.parse(rawString);
+
+        // Basic validation of decrypted data
+        if (!sessionData.id || !sessionData.initialQuery || !Array.isArray(sessionData.turns)) {
+            throw new Error("Decrypted data structure is corrupted.");
+        }
+        
+        // Add the loaded session to local history (or replace existing if ID matches)
+        const existingIndex = localHistory.findIndex(s => s.id === sessionData.id);
+        if (existingIndex !== -1) {
+            localHistory[existingIndex] = sessionData;
+        } else {
+            localHistory.unshift(sessionData);
+        }
+
+        saveLocalHistoryToStorage(); 
+        
+        // Load the newly imported session into the main modal
+        loadLocalHistoryItem(sessionData.id); 
+        
+        document.getElementById('melodyLockInputModal').classList.remove('active');
+        hashInputEl.value = ''; // Clear input
+        showMessage("Melody Lock Session Loaded and Saved!", 5000);
+
+    } catch (e) {
+        console.error("Decryption/Loading failed:", e);
+        showMessage(`Melody Lock Error: ${e.message}`, 5000);
+    }
 }
 
+
+// --- TTS and Query Logic (Unchanged) ---
 function readAnalysisAloud(){
     if(!('speechSynthesis' in window)){ 
         showMessage('Text-to-Speech not supported in this browser.');
@@ -654,7 +878,6 @@ function readAnalysisAloud(){
     setTimeout(()=>{window.speechSynthesis.speak(utterance);},100);
 }
 
-// --- Query Function (Local Storage persistence) ---
 async function performTruthQuery(query, isFollowUp=false){
     if(!query) return;
     
@@ -662,7 +885,6 @@ async function performTruthQuery(query, isFollowUp=false){
     let sessionToUpdate;
 
     if (!isFollowUp || !currentSessionId) {
-        // Start a NEW session
         lastQuery = query; 
         currentSessionId = crypto.randomUUID();
         sessionToUpdate = {
@@ -671,9 +893,8 @@ async function performTruthQuery(query, isFollowUp=false){
             timestamp: Date.now(),
             turns: []
         };
-        localHistory.unshift(sessionToUpdate); // Add new session to the beginning
+        localHistory.unshift(sessionToUpdate); 
     } else {
-        // Continue an existing session
         sessionToUpdate = localHistory.find(s => s.id === currentSessionId);
         if (!sessionToUpdate) {
             return showMessage("Error: Follow-up failed. Session not found locally.", 4000);
@@ -714,10 +935,7 @@ async function performTruthQuery(query, isFollowUp=false){
             isFollowUp: isFollowUp
         };
         
-        // Add new turn to the session object in memory
         sessionToUpdate.turns.push(newTurn);
-        
-        // Save the updated session history array back to local storage
         saveLocalHistoryToStorage(); 
 
         const loadingBlock = document.getElementById(tempLoadingId);
@@ -756,7 +974,7 @@ async function performTruthQuery(query, isFollowUp=false){
     }
 }
 
-// --- Event Listeners ---
+// --- Event Listeners and Toggles ---
 queryInput.addEventListener('keypress', e=>{
     if(e.key==='Enter'){
         const query = queryInput.value.trim();
@@ -764,7 +982,6 @@ queryInput.addEventListener('keypress', e=>{
         
         const isFollowUp = query.includes('→');
         
-        // Logic to handle follow-up queries and new queries
         if (isFollowUp && lastQuery && query.startsWith(lastQuery + ' →')) {
             const followUpQuery = query.substring(lastQuery.length + 3).trim(); 
             performTruthQuery(followUpQuery, true);
@@ -772,7 +989,6 @@ queryInput.addEventListener('keypress', e=>{
             showMessage("Cannot follow up without an active or loaded session.", 3000);
             return;
         } else {
-            // Fresh query (resets currentSessionId internally)
             performTruthQuery(query, false);
         }
         
@@ -782,31 +998,26 @@ queryInput.addEventListener('keypress', e=>{
 
 closeModalBtn.addEventListener('click',closeModal);
 modalOverlay.addEventListener('click', e=>{if(e.target===modalOverlay) closeModal();});
-copyAnalysisBtn.addEventListener('click',copyAnalysisToClipboard);
 ttsBtn.addEventListener('click',readAnalysisAloud);
+encryptAndShareBtn.addEventListener('click', generateHashAndDisplay);
 
 followUpBtn.addEventListener('click', ()=>{
     closeModal(); 
-    // Start the follow-up input with the previous query prefix
     queryInput.value = lastQuery ? lastQuery + ' → ' : '';
     queryInput.focus();
 });
 
 
-/**
- * Toggles the history panel open or closed.
- */
 function toggleHistoryPanel() {
     if (historyPanel.classList.contains('open')) {
         historyPanel.classList.remove('open');
     } else {
         loadLocalHistoryFromStorage();
-        displayLocalHistoryInPanel(); // Render the content before showing
+        displayLocalHistoryInPanel(); 
         historyPanel.classList.add('open');
     }
 }
 
-// History Panel Toggle (both buttons now use the toggle function)
 historyToggle.addEventListener('click', toggleHistoryPanel);
 closeHistoryBtn.addEventListener('click', toggleHistoryPanel);
 
@@ -821,16 +1032,13 @@ importFile.addEventListener('change', (event) => {
         try {
             const importedData = JSON.parse(e.target.result);
             
-            // Basic validation: Check if it's an array of objects that look like sessions
             if (!Array.isArray(importedData) || importedData.length === 0 || 
                 !importedData.every(item => typeof item === 'object' && item.id && Array.isArray(item.turns))) {
                 throw new Error("Invalid file structure. File must contain a list of truth sessions.");
             }
             
-            // Overwrite local storage and update state
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(importedData));
             
-            // Reload all state and UI
             loadLocalHistoryFromStorage();
             displayLocalHistoryInPanel();
             
@@ -842,17 +1050,15 @@ importFile.addEventListener('change', (event) => {
         }
     };
     reader.readAsText(file);
-    // Clear the input value so the same file can be loaded again
     event.target.value = null; 
 });
 
 
-// Initialize query from URL and start typing animation
+// Initialization
 window.addEventListener('load', ()=>{
-    // Initialize color mode for the history panel hover effect
     setMode(body.getAttribute('data-mode')); 
     
-    loadLocalHistoryFromStorage(); // Load initial data on startup
+    loadLocalHistoryFromStorage(); 
 
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
@@ -862,7 +1068,6 @@ window.addEventListener('load', ()=>{
         queryInput.value = '';
     }
     
-    // Start the typing animation
     typedTextEl.classList.add('is-typing');
 
     typedTextEl.addEventListener('animationend', (e) => {
