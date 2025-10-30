@@ -582,7 +582,7 @@
 
         function renderHistory() {
             const list = document.getElementById('historyList');
-            list.innerHTML = (localHistory || []).slice(-20).reverse().map(item => {
+            list.innerHTML = (localHistory || []).slice(0, 20).map(item => {
                 const query = (item.query || '').trim();
                 const display = query.slice(0, 50) + (query.length > 50 ? '...' : '');
                 return `
@@ -682,11 +682,7 @@
                         ${data.cached ? '<br><small><em>(Cached)</em></small>' : ''}
                     </div>`;
 
-                if (!data.cached) {
-                    localHistory.push({ query, answer: data.answer, model: data.model, timestamp: data.created / 1000 });
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(localHistory));
-                    renderHistory();
-                }
+                await fetchHistory();
             } catch (err) {
                 container.innerHTML = `<div class="conversation-block"><h4>Query: ${query}</h4><div class="content">Error: ${err.message}</div></div>`;
             }
