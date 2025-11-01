@@ -1,3 +1,4 @@
+<!-- Full modified mk8.html with TTS fixed -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1199,7 +1200,7 @@
             document.getElementById('editPreview').innerHTML = parse(text);
         }
 
-        // ==================== TTS FUNCTIONS ====================
+        // ==================== TTS FUNCTIONS (FIXED) ====================
 
         function openTtsMiniModal() {
             const modal = document.getElementById('ttsMiniModal');
@@ -1213,64 +1214,90 @@
 
         function startTts(text) {
             stopTts();
+            
+            // Create new utterance
             ttsUtterance = new SpeechSynthesisUtterance(text);
             ttsUtterance.rate = 1;
             ttsUtterance.pitch = 1;
             ttsUtterance.volume = 1;
-
+            
+            // Add TTS event listeners
             ttsUtterance.onstart = () => {
                 isTtsPlaying = true;
                 document.getElementById('ttsPlayPause').textContent = '⏸️';
                 updateTtsProgress(0);
+                console.log('TTS started');
             };
 
             ttsUtterance.onend = () => {
                 isTtsPlaying = false;
                 document.getElementById('ttsPlayPause').textContent = '▶️';
                 updateTtsProgress(100);
+                console.log('TTS ended');
                 setTimeout(() => updateTtsProgress(0), 1000);
             };
 
             ttsUtterance.onpause = () => {
                 isTtsPlaying = false;
                 document.getElementById('ttsPlayPause').textContent = '▶️';
+                console.log('TTS paused');
             };
 
             ttsUtterance.onresume = () => {
                 isTtsPlaying = true;
                 document.getElementById('ttsPlayPause').textContent = '⏸️';
+                console.log('TTS resumed');
             };
 
-            // Simple progress simulation (real progress is tricky without events)
+            // Progress tracking
+            let startTime = Date.now();
             let progressInterval;
+
             ttsUtterance.onstart = () => {
-                // ... existing
+                // Initialize progress tracking
+                startTime = Date.now();
                 progressInterval = setInterval(() => {
-                    // Approximate progress based on time (rough estimate)
-                    const elapsed = Date.now() - ttsUtterance.startTime;
-                    const estimatedDuration = text.length * 100; // ms per char approx
-                    const progress = Math.min(100, (elapsed / estimatedDuration) * 100);
-                    updateTtsProgress(progress);
+                    // Only update if we still have an utterance and are playing
+                    if (isTtsPlaying && ttsUtterance) {
+                        const elapsed = Date.now() - startTime;
+                        const estimatedDuration = text.length * 80; // ms per char approx
+                        const progress = Math.min(100, (elapsed / estimatedDuration) * 100);
+                        updateTtsProgress(progress);
+                    }
                 }, 100);
             };
 
             ttsUtterance.onend = () => {
                 clearInterval(progressInterval);
-                // ... existing
+                // Ensure progress reaches 100% exactly
+                updateTtsProgress(100);
+                setTimeout(() => updateTtsProgress(0), 1000);
             };
 
+            ttsUtterance.onerror = (event) => {
+                console.error('TTS Error:', event);
+                clearInterval(progressInterval);
+                updateTtsProgress(0);
+                isTtsPlaying = false;
+                document.getElementById('ttsPlayPause').textContent = '▶️';
+            };
+
+            // Start the speech synthesis
             speechSynthesis.speak(ttsUtterance);
+            console.log('Speech synthesis started:', text);
         }
 
         function pauseTts() {
-            if (isTtsPlaying) {
+            if (isTtsPlaying && ttsUtterance) {
                 speechSynthesis.pause();
+                console.log('TTS paused');
             }
         }
 
         function resumeTts() {
-            if (!isTtsPlaying) {
+            if (!isTtsPlaying && ttsUtterance) {
                 speechSynthesis.resume();
+                console.log('TTS resumed');
             }
         }
 
@@ -1280,12 +1307,16 @@
             document.getElementById('ttsPlayPause').textContent = '▶️';
             updateTtsProgress(0);
             if (ttsUtterance) {
-                clearInterval(ttsUtterance.progressInterval); // Custom prop if set
+                ttsUtterance = null; // Clear reference
             }
+            console.log('TTS stopped');
         }
 
         function updateTtsProgress(percent) {
-            document.getElementById('ttsProgressBar').style.width = `${percent}%`;
+            const progressBar = document.getElementById('ttsProgressBar');
+            if (progressBar) {
+                progressBar.style.width = `${percent}%`;
+            }
         }
 
         // ==================== CORE LOGIC ====================
@@ -1406,6 +1437,8 @@
                 if (!isTtsPlaying) {
                     startTts(text);
                 }
+            } else {
+                showMessage('No text available for TTS');
             }
         });
 
@@ -1413,14 +1446,16 @@
         document.getElementById('ttsMiniClose').addEventListener('click', closeTtsMiniModal);
 
         document.getElementById('ttsPlayPause').addEventListener('click', () => {
+            const text = document.querySelector('.conversation-block .content')?.innerText || '';
             if (isTtsPlaying) {
                 pauseTts();
             } else if (ttsUtterance) {
                 resumeTts();
-            } else {
+            } else if (text) {
                 // Restart if stopped
-                const text = document.querySelector('.conversation-block .content')?.innerText || '';
-                if (text) startTts(text);
+                startTts(text);
+            } else {
+                showMessage('No text available for TTS');
             }
         });
 
