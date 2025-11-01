@@ -545,15 +545,8 @@
             font-size: 0.9rem;
             flex: 1;
             min-width: 80px;
-            transition: all 0.3s ease;
-        }
-        .theme-buttons button:hover, .theme-buttons button:focus {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-            transform: translateY(-2px);
-        }
-
-        .model-selector {
+          }
+                 .model-selector {
             width: 100%;
             padding: 0.75rem;
             border: 2px solid var(--accent-color);
@@ -932,6 +925,7 @@
         let ttsUtterance = null;
         let isTtsPlaying = false;
         let editingEntry = null;
+        let currentHistoryId = null;
 
         // ==================== LOCAL STORAGE MANAGEMENT ====================
 
@@ -1163,6 +1157,8 @@
                 item.addEventListener('click', async e => {
                     if (e.target.closest('.menu-btn, .item-menu')) return; // Ignore if clicking menu
 
+                    // Store reference for TTS
+                    currentHistoryId = id;
                     // Load full conversation without re-query
                     const parse = await loadMarked();
                     const container = document.getElementById('resultContainer');
@@ -1199,7 +1195,7 @@
             document.getElementById('editPreview').innerHTML = parse(text);
         }
 
-        // ==================== TTS FUNCTIONS (FIXED) ====================
+        // ==================== TTS FUNCTIONS (WIth Safety Checks) ====================
 
         function openTtsMiniModal() {
             const modal = document.getElementById('ttsMiniModal');
@@ -1212,18 +1208,31 @@
         }
 
         function startTts(text) {
+            // Check for browser support
+            if (!('speechSynthesis' in window)) {
+                showMessage('Text-to-speech not supported in your browser');
+                return;
+            }
+
             // Stop any currently playing speech
             if (ttsUtterance) {
                 speechSynthesis.cancel();
             }
 
             // Create new utterance
-            ttsUtterance = new SpeechSynthesisUtterance(text);
+            try {
+                ttsUtterance = new SpeechSynthesisUtterance(text);
+            } catch (error) {
+                console.error('Error creating SpeechSynthesisUtterance:', error);
+                showMessage('Failed to create speech: ' + error.message);
+                return;
+            }
+
             ttsUtterance.rate = 1.0;
             ttsUtterance.pitch = 1.0;
             ttsUtterance.volume = 1.0;
 
-            // Add event listeners
+            // Event listeners
             ttsUtterance.onstart = function() {
                 isTtsPlaying = true;
                 document.getElementById('ttsPlayPause').textContent = '⏸️';
@@ -1258,7 +1267,7 @@
                 updateTtsProgress(0);
             };
 
-            // Set up progress tracking
+            // Progress tracking
             let startTime = Date.now();
             let progressInterval;
             
@@ -1437,6 +1446,14 @@
                 text = contentElement.innerText || contentElement.textContent;
             }
             
+            // If we're dealing with history item content
+            if (!text.trim() && currentHistoryId) {
+                const historyItem = localHistory.find(item => item.id === currentHistoryId);
+                if (historyItem && historyItem.answer) {
+                    text = historyItem.answer;
+                }
+            }
+            
             // Validate text exists
             if (text.trim()) {
                 openTtsMiniModal();
@@ -1456,11 +1473,12 @@
         // ==================== FIXED PLAYER CONTROLS ====================
         document.getElementById('ttsMiniClose').addEventListener('click', closeTtsMiniModal);
 
-                document.getElementById('ttsPlayPause').addEventListener('click', function() {
+        document.getElementById('ttsPlayPause').addEventListener('click', function() {
             // Try to get text from current conversation
             const contentElement = document.querySelector('.conversation-block .content');
             const text = contentElement ? contentElement.innerText || contentElement.textContent : '';
             
+            // Check if we have a text to process
             if (text.trim()) {
                 if (isTtsPlaying) {
                     console.log('Pausing TTS');
@@ -1474,6 +1492,7 @@
                 }
             } else {
                 showMessage('No text available for TTS');
+                console.warn('No text found for TTS');
             }
         });
 
@@ -1598,4 +1617,4 @@
         initializeApp();
     </script>
 </body>
-</html>
+</html>  
