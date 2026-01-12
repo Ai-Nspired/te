@@ -29,34 +29,30 @@
 </head>
 <body>
 <div class="card">
-  <div class="header">Universal AI Proxy</div>
+  <div class="header">truth-engine</div>
   <div class="content" id="c"></div>
   <div class="input-group">
     <div class="preset-selector">
       <label>Preset: 
         <select id="preset">
-          <option value="truth">truth</option>
-          <option value="coding">coding</option>
-          <option value="research">research</option>
-          <option value="creative">creative</option>
-          <option value="default">default</option>
+          <option value="truth-engine">truth-engine</option>          
         </select>
       </label>
     </div>
     <div class="options">
       <label><input type="checkbox" id="enableSearch"> Web Search</label>
-      <label><input type="checkbox" id="enableTools" checked> Tools</label>
-      <label><input type="checkbox" id="enableReasoning" checked> Reasoning</label>
+      <label><input type="checkbox" id="enableTools"> Tools</label>
+      <label><input type="checkbox" id="enableReasoning"> Reasoning</label>
     </div>
     <textarea id="i" placeholder="Ask anything..."></textarea>
-    <button onclick="go()">⏎</button>
+    <button onclick="go()">âŽ</button>
   </div>
 </div>
 
 <script>
 const c = document.getElementById('c');
 const i = document.getElementById('i');
-const WORKER_URL = 'https://your-worker.your-subdomain.workers.dev'; // Replace with your worker URL
+const WORKER_URL = 'https://orproxy.ai-n.workers.dev'; // Replace with your worker URL
 
 // Universal AI Proxy Class
 class UniversalAIProxy {
@@ -136,12 +132,12 @@ class UniversalAIProxy {
 
                   // Handle tool calls
                   if (delta && delta.tool_calls) {
-                    controller.enqueue(`\n\n🔧 **Tool Call**: ${delta.tool_calls[0].function.name}\n`);
+                    controller.enqueue(`\n\nðŸ”§ **Tool Call**: ${delta.tool_calls[0].function.name}\n`);
                   }
 
                   // Handle reasoning tokens
                   if (parsed.reasoning) {
-                    controller.enqueue(`\n\n💭 **Reasoning**: ${parsed.reasoning}\n`);
+                    controller.enqueue(`\n\nðŸ’­ **Reasoning**: ${parsed.reasoning}\n`);
                   }
                 } catch (e) {
                   // Skip malformed JSON
@@ -227,14 +223,14 @@ async function go() {
   try {
     const localState = aiProxy.getFromLocalStorage('session-state');
     if (localState && localState.messages.length > 0) {
-      workflow.push('✅ Local State: Found session history');
+      workflow.push('âœ… Local State: Found session history');
       logStep('Local State', 'success', `Found ${localState.messages.length} messages in history`);
     } else {
-      workflow.push('❌ Local State: No session history');
+      workflow.push('âŒ Local State: No session history');
       logStep('Local State', 'error', 'No session history found');
     }
   } catch(e) {
-    workflow.push(`❌ Local State: ${e.message}`);
+    workflow.push(`âŒ Local State: ${e.message}`);
     logStep('Local State', 'error', e.message);
   }
 
@@ -243,14 +239,14 @@ async function go() {
   try {
     const remoteState = await aiProxy.getState();
     if (remoteState && remoteState.messages.length > 0) {
-      workflow.push('✅ Remote Sync: State synchronized');
+      workflow.push('âœ… Remote Sync: State synchronized');
       logStep('Remote Sync', 'success', 'State synchronized with server');
     } else {
-      workflow.push('❌ Remote Sync: No remote state');
+      workflow.push('âŒ Remote Sync: No remote state');
       logStep('Remote Sync', 'error', 'No remote state found');
     }
   } catch(e) {
-    workflow.push(`❌ Remote Sync: ${e.message}`);
+    workflow.push(`âŒ Remote Sync: ${e.message}`);
     logStep('Remote Sync', 'error', e.message);
   }
 
@@ -286,10 +282,10 @@ async function go() {
     }
 
     answer = fullAnswer;
-    workflow.push('✅ AI Processing: Response completed');
+    workflow.push('âœ… AI Processing: Response completed');
     
   } catch(e) {
-    workflow.push(`❌ AI Processing: ${e.message}`);
+    workflow.push(`âŒ AI Processing: ${e.message}`);
     logStep('AI Processing', 'error', e.message);
     return;
   }
@@ -298,10 +294,10 @@ async function go() {
   logStep('Caching', 'pending', 'Caching result...');
   try {
     localStorage.setItem('ai-cache:' + key, answer);
-    workflow.push('✅ Caching: Result cached locally');
+    workflow.push('âœ… Caching: Result cached locally');
     logStep('Caching', 'success', 'Result cached for future use');
   } catch(e) {
-    workflow.push(`❌ Caching: ${e.message}`);
+    workflow.push(`âŒ Caching: ${e.message}`);
     logStep('Caching', 'error', e.message);
   }
 
@@ -311,7 +307,7 @@ async function go() {
 function done(answer) {
   c.innerHTML = `
     <div style="margin-bottom: 20px; padding: 15px; background: rgba(34,197,94,.1); border-radius: 8px; border-left: 4px solid #22c55e;">
-      <strong>✅ Complete</strong>
+      <strong>âœ… Complete</strong>
     </div>
     <div style="background: rgba(250,204,21,.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(250,204,21,.2);">
       ${marked.parse(answer)}
