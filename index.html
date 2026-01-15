@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>truth-engine</title>
+  <title>Universal AI Proxy</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body{background:#000;color:#fff;margin:0;height:100dvh;display:grid;place-items:center;font-family:monospace}
@@ -20,33 +20,39 @@
     .workflow-step.success{background:rgba(34,197,94,.2);border-left:4px solid #22c55e}
     .workflow-step.error{background:rgba(239,68,68,.2);border-left:4px solid #ef4444}
     .workflow-step.pending{background:rgba(59,130,246,.2);border-left:4px solid #3b82f6}
-    .preset-selector{padding:10px;margin-bottom:10px}
+    .preset-selector{padding:10px;margin-bottom:10px;display:flex;gap:15px;align-items:center;flex-wrap:wrap}
     .preset-selector select{background:#000;color:#fff;border:1px solid #facc15;padding:5px;border-radius:4px}
-    .options{display:flex;gap:10px;margin-bottom:10px;font-size:12px}
-    .options label{display:flex;align-items:center;gap:5px}
-    .options input[type="checkbox"]{accent-color:#facc15}
+    .variants{display:flex;gap:10px}
+    .variant-label{display:flex;align-items:center;gap:5px;font-size:12px}
+    .variant-label input[type="checkbox"]{accent-color:#facc15}
+    .thinking-block{background:rgba(59,130,246,.1);border-left:4px solid #3b82f6;padding:10px;margin:10px 0;border-radius:4px;font-style:italic}
   </style>
 </head>
 <body>
 <div class="card">
-  <div class="header">truth-engine</div>
+  <div class="header">Universal AI Proxy</div>
   <div class="content" id="c"></div>
   <div class="input-group">
     <div class="preset-selector">
-      <label>Preset: 
-        <select id="preset">
-          <option value="truth-engine">truth-engine</option>          
-          <option value="coding">coding</option>          
-          <option value="rent">rent</option>          
-         </select>
+      <label>Preset:
+        <select id="basePreset">
+          <option value="truth-engine">truth-engine</option>
+          <option value="coding">coding</option>
+          <option value="research">research</option>
+          <option value="creative">creative</option>
+          <option value="default">default</option>
+        </select>
       </label>
+      <div class="variants">
+        <label class="variant-label">
+          <input type="checkbox" id="variantOnline"> :online
+        </label>
+        <label class="variant-label">
+          <input type="checkbox" id="variantExtended"> :extended
+        </label>
+      </div>
     </div>
-    <div class="options">
-      <label><input type="checkbox" id="enableSearch"> Web Search</label>
-      <label><input type="checkbox" id="enableTools"> Tools</label>
-      <label><input type="checkbox" id="enableReasoning"> Reasoning</label>
-    </div>
-    <textarea id="i" placeholder="Ask anything...">🫠</textarea>
+    <textarea id="i" placeholder="Ask anything..."></textarea>
     <button onclick="go()">⏎</button>
   </div>
 </div>
@@ -56,11 +62,11 @@ const c = document.getElementById('c');
 const i = document.getElementById('i');
 const WORKER_URL = 'https://orproxy.ai-n.workers.dev'; // Replace with your worker URL
 
-// Universal AI Proxy Class
-class UniversalAIProxy {
+class AIProxy {
   constructor(workerUrl) {
     this.workerUrl = workerUrl;
     this.sessionId = this.getOrCreateSessionId();
+    this.conversationHistory = this.loadHistory();
   }
 
   getOrCreateSessionId() {
@@ -72,30 +78,54 @@ class UniversalAIProxy {
     return sessionId;
   }
 
-  async streamChat(messages, options = {}) {
+  loadHistory() {
+    return JSON.parse(localStorage.getItem('conversation-history') || '[]');
+  }
+
+  saveHistory() {
+    localStorage.setItem('conversation-history', JSON.stringify(this.conversationHistory));
+  }
+
+  addToHistory(userPrompt, assistantResponse) {
+    this.conversationHistory.push({
+      user: userPrompt,
+      assistant: assistantResponse,
+      timestamp: Date.now()
+    });
+    
+    if (this.conversationHistory.length > 50) {
+      this.conversationHistory = this.conversationHistory.slice(-50);
+    }
+    
+    this.saveHistory();
+  }
+
+  getLastExchange() {
+    return this.conversationHistory[this.conversationHistory.length - 1] || null;
+  }
+
+  async sendRequest(prompt, preset) {
     const requestBody = {
-      messages,
-      sessionId: this.sessionId,
-      userId: options.userId || 'anonymous',
-      preset: options.preset || 'default',
-      enableSearch: options.enableSearch || false,
-      maxContext: options.maxContext || 32000
+      prompt: prompt,
+      preset: preset,
+      stream: true,
+      tools: [],
+      context_id: this.sessionId
     };
 
-    // Save to local storage
-    this.saveToLocalStorage('last-request', requestBody);
-
-    const response = await fetch(`${this.workerUrl}/chat`, {
+    const response = await fetch(this.workerUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(requestBody)
     });
 
-    if (!response.body) {
-      throw new Error('No response body');
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
     }
 
-    return this.processStream(response.body);
+    return response.body;
   }
 
   async processStream(stream) {
@@ -125,24 +155,20 @@ class UniversalAIProxy {
 
                 try {
                   const parsed = JSON.parse(data);
-                  const delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta;
                   
-                  if (delta && delta.content) {
-                    fullResponse += delta.content;
-                    controller.enqueue(delta.content);
+                  if (parsed.type === 'content' && parsed.content) {
+                    fullResponse += parsed.content;
+                    controller.enqueue(parsed.content);
                   }
-
-                  // Handle tool calls
-                  if (delta && delta.tool_calls) {
-                    controller.enqueue(`\n\nðŸ”§ **Tool Call**: ${delta.tool_calls[0].function.name}\n`);
+                  
+                  if (parsed.type === 'thinking' && parsed.content) {
+                    controller.enqueue(`\n\n💭 *Thinking:* ${parsed.content}\n\n`);
                   }
-
-                  // Handle reasoning tokens
-                  if (parsed.reasoning) {
-                    controller.enqueue(`\n\nðŸ’­ **Reasoning**: ${parsed.reasoning}\n`);
+                  
+                  if (parsed.type === 'tool_call' && parsed.tool_calls) {
+                    controller.enqueue(`\n\n🔧 *Tool call:* ${parsed.tool_calls[0].function.name}\n`);
                   }
                 } catch (e) {
-                  // Skip malformed JSON
                   continue;
                 }
               }
@@ -154,121 +180,53 @@ class UniversalAIProxy {
       }
     });
   }
-
-  async getState() {
-    const response = await fetch(`${this.workerUrl}/state?sessionId=${this.sessionId}`);
-    const state = await response.json();
-    
-    // Sync to local storage
-    this.saveToLocalStorage('session-state', state);
-    
-    return state;
-  }
-
-  saveToLocalStorage(key, data) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error('Local storage error:', error);
-    }
-  }
-
-  getFromLocalStorage(key) {
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : null;
-    } catch (error) {
-      console.error('Local storage error:', error);
-      return null;
-    }
-  }
 }
 
-// Initialize proxy
-const aiProxy = new UniversalAIProxy(WORKER_URL);
+const aiProxy = new AIProxy(WORKER_URL);
 
-addEventListener('load', () => {
-  const q = new URLSearchParams(location.search).get('q');
-  if (q) { i.value = q.replace(/\s+/g, ' '); go(); }
-});
+function buildPresetString() {
+  const base = document.getElementById('basePreset').value;
+  const variants = [];
+  
+  if (document.getElementById('variantOnline').checked) variants.push('online');
+  if (document.getElementById('variantExtended').checked) variants.push('extended');
+  
+  return variants.length > 0 ? `${base}:${variants.join(':')}` : base;
+}
 
 async function go() {
   let q = i.value.trim();
   if (!q) return;
-  i.value = '';
   
-  // Get options
-  const preset = document.getElementById('preset').value;
-  const enableSearch = document.getElementById('enableSearch').checked;
-  const enableTools = document.getElementById('enableTools').checked;
-  const enableReasoning = document.getElementById('enableReasoning').checked;
+  // Check for follow-up shortcut
+  if (q === '...' || q === 'continue') {
+    const last = aiProxy.getLastExchange();
+    if (last) {
+      q = `Continue from: ${last.assistant.substring(last.assistant.length - 200)}`;
+    }
+  }
+  
+  i.value = '';
+  const preset = buildPresetString();
   
   // Display workflow steps
   let workflowLog = '';
   const logStep = (step, status, message) => {
     workflowLog += `<div class="workflow-step ${status}"><strong>${step}:</strong> ${message}</div>`;
     c.innerHTML = workflowLog + '<div class="thinking">processing...</div>';
+    c.scrollTop = c.scrollHeight;
   };
 
-  const key = q.toLowerCase().replace(/\s+/g, '+');
-  const cached = localStorage.getItem('ai-cache:' + key);
-  if (cached) {
-    logStep('Cache', 'success', 'Found cached result');
-    return done(cached);
-  }
+  logStep('Session', 'pending', `Using session: ${aiProxy.sessionId.substring(0, 8)}...`);
+  logStep('Preset', 'pending', `Selected: ${preset}`);
+  logStep('Context', 'pending', 'Building context from embeddings...');
 
-  let answer = '';
-  let workflow = [];
-
-  // Step 1: Local State Check
-  logStep('Local State', 'pending', 'Checking local session state...');
   try {
-    const localState = aiProxy.getFromLocalStorage('session-state');
-    if (localState && localState.messages.length > 0) {
-      workflow.push('👊… Local State: Found session history');
-      logStep('Local State', 'success', `Found ${localState.messages.length} messages in history`);
-    } else {
-      workflow.push('👊 Local State: No session history');
-      logStep('Local State', 'error', 'No session history found');
-    }
-  } catch(e) {
-    workflow.push(`👊 Local State: ${e.message}`);
-    logStep('Local State', 'error', e.message);
-  }
-
-  // Step 2: Remote State Sync
-  logStep('Remote Sync', 'pending', 'Syncing with remote state...');
-  try {
-    const remoteState = await aiProxy.getState();
-    if (remoteState && remoteState.messages.length > 0) {
-      workflow.push('🤙… Remote Sync: State synchronized');
-      logStep('Remote Sync', 'success', 'State synchronized with server');
-    } else {
-      workflow.push('🫸 Remote Sync: No remote state');
-      logStep('Remote Sync', 'error', 'No remote state found');
-    }
-  } catch(e) {
-    workflow.push(`🤝 Remote Sync: ${e.message}`);
-    logStep('Remote Sync', 'error', e.message);
-  }
-
-  // Step 3: AI Processing
-  logStep('AI Processing', 'pending', `Using preset: ${preset}${enableSearch ? ' + Search' : ''}${enableTools ? ' + Tools' : ''}${enableReasoning ? ' + Reasoning' : ''}`);
-  
-  try {
-    const messages = [{ role: 'user', content: q }];
-    const options = {
-      preset,
-      enableSearch,
-      enableTools,
-      enableReasoning,
-      userId: 'user-' + Date.now()
-    };
-
-    const stream = await aiProxy.streamChat(messages, options);
-    const reader = stream.getReader();
+    const stream = await aiProxy.sendRequest(q, preset);
+    const processed = await aiProxy.processStream(stream);
+    const reader = processed.getReader();
     
-    workflowLog += `<div class="workflow-step success"><strong>AI Processing:</strong> Streaming response...</div>`;
+    workflowLog += `<div class="workflow-step success"><strong>AI:</strong> Streaming response...</div>`;
     c.innerHTML = workflowLog + '<div id="response"></div>';
     
     const responseDiv = document.getElementById('response');
@@ -279,43 +237,58 @@ async function go() {
       if (done) break;
       
       fullAnswer += value;
-      responseDiv.innerHTML = marked.parse(fullAnswer);
+      
+      // Format thinking blocks
+      let formattedAnswer = fullAnswer;
+      const thinkingRegex = /\n\n💭 \*Thinking:\* (.*?)\n\n/gs;
+      formattedAnswer = formattedAnswer.replace(thinkingRegex, (match, thinking) => 
+        `<div class="thinking-block">💭 Thinking: ${thinking}</div>`
+      );
+      
+      responseDiv.innerHTML = marked.parse(formattedAnswer);
       c.scrollTop = c.scrollHeight;
     }
 
-    answer = fullAnswer;
-    workflow.push('👊… AI Processing: Response completed');
+    // Save to history
+    aiProxy.addToHistory(q, fullAnswer);
     
-  } catch(e) {
-    workflow.push(` AI Processing: ${e.message}`);
-    logStep('AI Processing', 'error', e.message);
-    return;
+    // Cache result
+    const cacheKey = q.toLowerCase().replace(/\s+/g, '+');
+    try {
+      localStorage.setItem('ai-cache:' + cacheKey, fullAnswer);
+    } catch(e) {
+      console.log('Cache full, skipping');
+    }
+    
+    // Show completion
+    c.innerHTML = `
+      <div style="margin-bottom: 20px; padding: 15px; background: rgba(34,197,94,.1); border-radius: 8px; border-left: 4px solid #22c55e;">
+        <strong>✅ Complete</strong> (Session: ${aiProxy.sessionId.substring(0, 8)}..., Preset: ${preset})
+      </div>
+      <div style="background: rgba(250,204,21,.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(250,204,21,.2);">
+        ${marked.parse(fullAnswer)}
+      </div>
+      <div style="margin-top: 20px; padding: 15px; background: rgba(59,130,246,.1); border-radius: 8px; font-size: 12px;">
+        <strong>💡 Quick actions:</strong><br>
+        <button onclick="i.value='...'; go()" style="background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; margin: 5px; cursor: pointer">Continue last</button>
+        <button onclick="clearHistory()" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; margin: 5px; cursor: pointer">Clear history</button>
+      </div>
+    `;
+    
+  } catch(error) {
+    logStep('Error', 'error', error.message);
+    c.innerHTML += `<div style="color: #ef4444; margin-top: 20px;">Error: ${error.message}</div>`;
   }
-
-  // Step 4: Cache Result
-  logStep('Caching', 'pending', 'Caching result...');
-  try {
-    localStorage.setItem('ai-cache:' + key, answer);
-    workflow.push('… Caching: Result cached locally');
-    logStep('Caching', 'success', 'Result cached for future use');
-  } catch(e) {
-    workflow.push(` Caching: ${e.message}`);
-    logStep('Caching', 'error', e.message);
-  }
-
-  done(answer);
 }
 
-function done(answer) {
-  c.innerHTML = `
-    <div style="margin-bottom: 20px; padding: 15px; background: rgba(34,197,94,.1); border-radius: 8px; border-left: 4px solid #22c55e;">
-      <strong>🫶… Complete</strong>
-    </div>
-    <div style="background: rgba(250,204,21,.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(250,204,21,.2);">
-      ${marked.parse(answer)}
-    </div>
-  `;
-  c.scrollTop = c.scrollHeight;
+function clearHistory() {
+  if (confirm('Clear conversation history?')) {
+    localStorage.removeItem('conversation-history');
+    localStorage.removeItem('ai-session-id');
+    aiProxy.sessionId = aiProxy.getOrCreateSessionId();
+    aiProxy.conversationHistory = [];
+    c.innerHTML = '<div style="color: #22c55e;">History cleared. New session started.</div>';
+  }
 }
 
 // Keyboard shortcuts
@@ -332,10 +305,16 @@ i.addEventListener('input', () => {
 });
 
 // Restore draft on load
-addEventListener('load', () => {
+window.addEventListener('load', () => {
   const draft = localStorage.getItem('ai-input-draft');
   if (draft && !i.value) {
     i.value = draft;
+  }
+  
+  const q = new URLSearchParams(location.search).get('q');
+  if (q) { 
+    i.value = q.replace(/\s+/g, ' '); 
+    go(); 
   }
 });
 </script>
