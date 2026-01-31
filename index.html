@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Universal AI Proxy</title>
+  <title>ai-nspired</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body{background:#000;color:#fff;margin:0;height:100dvh;display:grid;place-items:center;font-family:monospace}
@@ -14,6 +14,7 @@
     textarea{width:100%;height:140px;background:rgba(0,0,0,.4);border:2px solid #facc15;border-radius:32px;color:#fff;padding:20px 80px 20px 20px;font-size:18px;resize:none;outline:none;box-sizing:border-box}
     button{position:absolute;right:30px;bottom:30px;width:55px;height:55px;background:#facc15;color:#000;border:none;border-radius:50%;font-size:32px;font-weight:900;box-shadow:0 4px 20px rgba(250,204,21,.5);display:grid;place-items:center;cursor:pointer}
     button:hover{transform:scale(1.1);box-shadow:0 6px 30px rgba(250,204,21,.7)}
+    button:disabled{opacity:0.5;cursor:not-allowed;transform:none}
     .thinking{text-align:center;padding:60px;font-size:48px;animation:p 2s infinite;color:#facc15}
     @keyframes p{0%,100%{opacity:.4}50%{opacity:1}}
     .workflow-step{margin:10px 0;padding:10px;background:rgba(250,204,21,.1);border-radius:8px;font-size:14px}
@@ -26,12 +27,36 @@
     .variant-label{display:flex;align-items:center;gap:5px;font-size:12px}
     .variant-label input[type="checkbox"]{accent-color:#facc15}
     .thinking-block{background:rgba(59,130,246,.1);border-left:4px solid #3b82f6;padding:10px;margin:10px 0;border-radius:4px;font-style:italic}
+    .settings-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+    .settings-row label{color:#facc15;font-size:14px;min-width:80px}
+    .settings-row input{background:#000;color:#fff;border:1px solid #facc15;padding:5px;border-radius:4px;flex:1;min-width:200px}
+    .settings-row button{position:static;width:auto;height:auto;padding:5px 15px;font-size:14px;border-radius:4px}
+    #error-display{color:#ef4444;padding:20px;text-align:center;display:none}
+    .response-content{background:rgba(250,204,21,.05);padding:20px;border-radius:12px;border:1px solid rgba(250,204,21,.2);margin:20px 0}
+    .quick-actions{padding:15px;background:rgba(59,130,246,.1);border-radius:8px;font-size:12px;margin-top:20px}
+    .quick-actions button{position:static;width:auto;height:auto;padding:5px 10px;font-size:12px;border-radius:4px;margin:5px;cursor:pointer;border:none}
+    .status-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:10px}
+    .status-badge.ok{background:rgba(34,197,94,.2);color:#22c55e}
+    .status-badge.error{background:rgba(239,68,68,.2);color:#ef4444}
+    .debug-info{background:rgba(0,0,0,.5);padding:10px;border-radius:4px;font-size:11px;color:#666;margin-top:10px}
   </style>
 </head>
 <body>
 <div class="card">
-  <div class="header">Universal AI Proxy</div>
-  <div class="content" id="c"></div>
+  <div class="header">
+    ai-nspired
+    <span id="statusBadge" class="status-badge"></span>
+  </div>
+  <div class="content" id="c">
+    <div style="color:#94a3b8;text-align:center;padding:40px;">
+      <div style="font-size:18px;margin-bottom:20px;">Ready to process</div>
+      <div style="font-size:12px;">
+        Press Enter or click the button to send your query.
+      </div>
+      <div class="debug-info" id="debugInfo"></div>
+    </div>
+  </div>
+  <div id="error-display"></div>
   <div class="input-group">
     <div class="preset-selector">
       <label>Preset:
@@ -52,19 +77,22 @@
         </label>
       </div>
     </div>
+    <div class="settings-row">
+      <label>Session ID:</label>
+      <input type="text" id="sessionId" readonly style="flex:0.5">
+      <button onclick="resetSession()">New Session</button>
+    </div>
     <textarea id="i" placeholder="Ask anything..."></textarea>
-    <button onclick="go()">⏎</button>
+    <button id="sendBtn" onclick="go()">⏎</button>
   </div>
 </div>
 
 <script>
-const c = document.getElementById('c');
-const i = document.getElementById('i');
-const WORKER_URL = 'https://orproxy.ai-n.workers.dev'; // Replace with your worker URL
+// HARDCODED WORKER URL - DO NOT CHANGE
+const WORKER_URL = 'https://ai-proxy.ai-n.workers.dev/api/generate';
 
 class AIProxy {
-  constructor(workerUrl) {
-    this.workerUrl = workerUrl;
+  constructor() {
     this.sessionId = this.getOrCreateSessionId();
     this.conversationHistory = this.loadHistory();
   }
@@ -72,18 +100,26 @@ class AIProxy {
   getOrCreateSessionId() {
     let sessionId = localStorage.getItem('ai-session-id');
     if (!sessionId) {
-      sessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      sessionId = 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5);
       localStorage.setItem('ai-session-id', sessionId);
     }
     return sessionId;
   }
 
   loadHistory() {
-    return JSON.parse(localStorage.getItem('conversation-history') || '[]');
+    try {
+      return JSON.parse(localStorage.getItem('conversation-history') || '[]');
+    } catch {
+      return [];
+    }
   }
 
   saveHistory() {
-    localStorage.setItem('conversation-history', JSON.stringify(this.conversationHistory));
+    try {
+      localStorage.setItem('conversation-history', JSON.stringify(this.conversationHistory));
+    } catch(e) {
+      console.log('Failed to save history');
+    }
   }
 
   addToHistory(userPrompt, assistantResponse) {
@@ -113,7 +149,11 @@ class AIProxy {
       context_id: this.sessionId
     };
 
-    const response = await fetch(this.workerUrl, {
+    console.log('=== WORKER REQUEST ===');
+    console.log('URL:', WORKER_URL);
+    console.log('Request:', JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json'
@@ -121,68 +161,108 @@ class AIProxy {
       body: JSON.stringify(requestBody)
     });
 
+    console.log('=== WORKER RESPONSE ===');
+    console.log('Status:', response.status);
+    console.log('Status Text:', response.statusText);
+    console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Error body:', errorText);
+      throw new Error(`API error ${response.status}: ${errorText.substring(0, 300)}`);
     }
 
     return response.body;
   }
 
-  async processStream(stream) {
+  // Process OpenRouter streaming format (OpenAI-compatible)
+  async *processOpenRouterStream(stream) {
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    let fullResponse = '';
+    let chunkCount = 0;
 
-    return new ReadableStream({
-      async start(controller) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') {
-                  controller.close();
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            
+            // Skip [DONE] marker
+            if (data === '[DONE]') {
+              console.log('Stream complete (DONE)');
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              chunkCount++;
+              
+              // Debug first chunk
+              if (chunkCount === 1) {
+                console.log('First chunk:', JSON.stringify(parsed, null, 2));
+              }
+              
+              // OpenRouter/OpenAI streaming format
+              if (parsed.choices && parsed.choices.length > 0) {
+                const delta = parsed.choices[0].delta;
+                
+                if (delta && delta.content) {
+                  yield delta.content;
+                }
+                
+                // Check for completion
+                if (parsed.choices[0].finish_reason) {
+                  console.log(`Stream complete after ${chunkCount} chunks, finish_reason: ${parsed.choices[0].finish_reason}`);
                   return;
                 }
-
-                try {
-                  const parsed = JSON.parse(data);
-                  
-                  if (parsed.type === 'content' && parsed.content) {
-                    fullResponse += parsed.content;
-                    controller.enqueue(parsed.content);
-                  }
-                  
-                  if (parsed.type === 'thinking' && parsed.content) {
-                    controller.enqueue(`\n\n💭 *Thinking:* ${parsed.content}\n\n`);
-                  }
-                  
-                  if (parsed.type === 'tool_call' && parsed.tool_calls) {
-                    controller.enqueue(`\n\n🔧 *Tool call:* ${parsed.tool_calls[0].function.name}\n`);
-                  }
-                } catch (e) {
-                  continue;
-                }
               }
+              
+            } catch (e) {
+              console.log('Parse error for chunk:', line.substring(0, 100));
             }
           }
-        } catch (error) {
-          controller.error(error);
         }
       }
-    });
+    } catch (error) {
+      console.error('Stream error:', error);
+      throw error;
+    }
   }
 }
 
-const aiProxy = new AIProxy(WORKER_URL);
+const aiProxy = new AIProxy();
+
+// Initialize
+document.getElementById('sessionId').value = aiProxy.sessionId;
+
+// Show debug info
+document.getElementById('debugInfo').innerHTML = `
+  Worker URL: ${WORKER_URL}<br>
+  Session: ${aiProxy.sessionId.substring(0, 15)}...
+`;
+
+// Load saved input
+window.addEventListener('load', () => {
+  const draft = localStorage.getItem('ai-input-draft');
+  if (draft) {
+    document.getElementById('i').value = draft;
+  }
+  
+  // Check for query param
+  const q = new URLSearchParams(location.search).get('q');
+  if (q) { 
+    document.getElementById('i').value = q.replace(/\s+/g, ' '); 
+    go(); 
+  }
+});
 
 function buildPresetString() {
   const base = document.getElementById('basePreset').value;
@@ -194,91 +274,135 @@ function buildPresetString() {
   return variants.length > 0 ? `${base}:${variants.join(':')}` : base;
 }
 
+function showError(message, type = 'error') {
+  const errorDiv = document.getElementById('error-display');
+  errorDiv.style.display = 'block';
+  errorDiv.style.color = type === 'success' ? '#22c55e' : '#ef4444';
+  errorDiv.textContent = message;
+  
+  setTimeout(() => {
+    errorDiv.style.display = 'none';
+  }, 5000);
+}
+
+function resetSession() {
+  if (confirm('Start a new session? Current session ID will be lost.')) {
+    localStorage.removeItem('ai-session-id');
+    aiProxy.sessionId = aiProxy.getOrCreateSessionId();
+    document.getElementById('sessionId').value = aiProxy.sessionId;
+    showError('✅ New session created', 'success');
+  }
+}
+
 async function go() {
-  let q = i.value.trim();
+  let q = document.getElementById('i').value.trim();
+  
   if (!q) return;
   
   // Check for follow-up shortcut
   if (q === '...' || q === 'continue') {
     const last = aiProxy.getLastExchange();
     if (last) {
-      q = `Continue from: ${last.assistant.substring(last.assistant.length - 200)}`;
+      const last200 = last.assistant.substring(Math.max(0, last.assistant.length - 200));
+      q = `Continue from where we left off: ${last200}`;
+    } else {
+      showError('No previous conversation to continue');
+      return;
     }
   }
   
-  i.value = '';
+  document.getElementById('i').value = '';
+  localStorage.removeItem('ai-input-draft');
+  
   const preset = buildPresetString();
+  const sendBtn = document.getElementById('sendBtn');
   
   // Display workflow steps
   let workflowLog = '';
   const logStep = (step, status, message) => {
     workflowLog += `<div class="workflow-step ${status}"><strong>${step}:</strong> ${message}</div>`;
-    c.innerHTML = workflowLog + '<div class="thinking">processing...</div>';
-    c.scrollTop = c.scrollHeight;
+    document.getElementById('c').innerHTML = workflowLog + '<div class="thinking">processing...</div>';
+    document.getElementById('c').scrollTop = document.getElementById('c').scrollHeight;
   };
 
-  logStep('Session', 'pending', `Using session: ${aiProxy.sessionId.substring(0, 8)}...`);
-  logStep('Preset', 'pending', `Selected: ${preset}`);
-  logStep('Context', 'pending', 'Building context from embeddings...');
+  logStep('Session', 'pending', `ID: ${aiProxy.sessionId.substring(0, 12)}...`);
+  logStep('Preset', 'pending', `Model: ${preset}`);
+  logStep('Worker', 'pending', `URL: ${WORKER_URL.substring(0, 35)}...`);
+
+  sendBtn.disabled = true;
 
   try {
-    const stream = await aiProxy.sendRequest(q, preset);
-    const processed = await aiProxy.processStream(stream);
-    const reader = processed.getReader();
+    logStep('Worker', 'success', 'Connecting...');
     
-    workflowLog += `<div class="workflow-step success"><strong>AI:</strong> Streaming response...</div>`;
-    c.innerHTML = workflowLog + '<div id="response"></div>';
+    const stream = await aiProxy.sendRequest(q, preset);
+    
+    logStep('Worker', 'success', 'Streaming response...');
+    
+    workflowLog += `<div class="workflow-step success"><strong>Receiving:</strong> Tokens streaming...</div>`;
+    document.getElementById('c').innerHTML = workflowLog + '<div id="response"></div>';
     
     const responseDiv = document.getElementById('response');
+    responseDiv.innerHTML = '<div class="thinking">AI is thinking...</div>';
+    
     let fullAnswer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    // Process the stream
+    const streamProcessor = aiProxy.processOpenRouterStream(stream);
+    
+    for await (const chunk of streamProcessor) {
+      fullAnswer += chunk;
       
-      fullAnswer += value;
-      
-      // Format thinking blocks
-      let formattedAnswer = fullAnswer;
-      const thinkingRegex = /\n\n💭 \*Thinking:\* (.*?)\n\n/gs;
-      formattedAnswer = formattedAnswer.replace(thinkingRegex, (match, thinking) => 
-        `<div class="thinking-block">💭 Thinking: ${thinking}</div>`
-      );
-      
-      responseDiv.innerHTML = marked.parse(formattedAnswer);
-      c.scrollTop = c.scrollHeight;
+      // Render with marked
+      responseDiv.innerHTML = marked.parse(fullAnswer);
+      document.getElementById('c').scrollTop = document.getElementById('c').scrollHeight;
     }
 
     // Save to history
     aiProxy.addToHistory(q, fullAnswer);
     
-    // Cache result
-    const cacheKey = q.toLowerCase().replace(/\s+/g, '+');
-    try {
-      localStorage.setItem('ai-cache:' + cacheKey, fullAnswer);
-    } catch(e) {
-      console.log('Cache full, skipping');
-    }
-    
     // Show completion
-    c.innerHTML = `
+    document.getElementById('c').innerHTML = `
       <div style="margin-bottom: 20px; padding: 15px; background: rgba(34,197,94,.1); border-radius: 8px; border-left: 4px solid #22c55e;">
-        <strong>✅ Complete</strong> (Session: ${aiProxy.sessionId.substring(0, 8)}..., Preset: ${preset})
+        <strong>✅ Complete</strong> (Session: ${aiProxy.sessionId.substring(0, 12)}..., Preset: ${preset})
       </div>
-      <div style="background: rgba(250,204,21,.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(250,204,21,.2);">
+      <div class="response-content">
         ${marked.parse(fullAnswer)}
       </div>
-      <div style="margin-top: 20px; padding: 15px; background: rgba(59,130,246,.1); border-radius: 8px; font-size: 12px;">
-        <strong>💡 Quick actions:</strong><br>
-        <button onclick="i.value='...'; go()" style="background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; margin: 5px; cursor: pointer">Continue last</button>
-        <button onclick="clearHistory()" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; margin: 5px; cursor: pointer">Clear history</button>
+      <div class="quick-actions">
+        <strong>Quick actions:</strong><br>
+        <button onclick="continueLast()" style="background: #3b82f6; color: white;">Continue last</button>
+        <button onclick="clearHistory()" style="background: #ef4444; color: white;">Clear history</button>
+        <button onclick="copyResponse()" style="background: #facc15; color: black;">Copy</button>
       </div>
     `;
     
   } catch(error) {
     logStep('Error', 'error', error.message);
-    c.innerHTML += `<div style="color: #ef4444; margin-top: 20px;">Error: ${error.message}</div>`;
+    document.getElementById('c').innerHTML += `<div style="color: #ef4444; margin-top: 20px;">Error: ${error.message}</div>`;
+    
+    // Debug info
+    document.getElementById('c').innerHTML += `
+      <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,.5); border-radius: 8px; font-size: 11px; color: #666;">
+        <strong>Debug Info:</strong><br>
+        Worker URL: ${WORKER_URL}<br>
+        Session: ${aiProxy.sessionId}<br>
+        Preset: ${preset}<br>
+        <br>
+        <strong>Check these:</strong><br>
+        1. Worker is deployed with "npx wrangler deploy"<br>
+        2. OPENROUTER_API_KEY is set in wrangler.toml<br>
+        3. Worker fetch handler is working correctly<br>
+        4. CORS headers are set for your frontend domain
+      </div>
+    `;
+  } finally {
+    sendBtn.disabled = false;
   }
+}
+
+function continueLast() {
+  document.getElementById('i').value = '...';
+  go();
 }
 
 function clearHistory() {
@@ -287,12 +411,22 @@ function clearHistory() {
     localStorage.removeItem('ai-session-id');
     aiProxy.sessionId = aiProxy.getOrCreateSessionId();
     aiProxy.conversationHistory = [];
-    c.innerHTML = '<div style="color: #22c55e;">History cleared. New session started.</div>';
+    document.getElementById('sessionId').value = aiProxy.sessionId;
+    document.getElementById('c').innerHTML = '<div style="color: #22c55e;">History cleared. New session started.</div>';
+  }
+}
+
+function copyResponse() {
+  const responseDiv = document.querySelector('.response-content');
+  if (responseDiv) {
+    navigator.clipboard.writeText(responseDiv.textContent).then(() => {
+      showError('✅ Response copied', 'success');
+    });
   }
 }
 
 // Keyboard shortcuts
-i.addEventListener('keydown', (e) => {
+document.getElementById('i').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     go();
@@ -300,22 +434,8 @@ i.addEventListener('keydown', (e) => {
 });
 
 // Auto-save input
-i.addEventListener('input', () => {
-  localStorage.setItem('ai-input-draft', i.value);
-});
-
-// Restore draft on load
-window.addEventListener('load', () => {
-  const draft = localStorage.getItem('ai-input-draft');
-  if (draft && !i.value) {
-    i.value = draft;
-  }
-  
-  const q = new URLSearchParams(location.search).get('q');
-  if (q) { 
-    i.value = q.replace(/\s+/g, ' '); 
-    go(); 
-  }
+document.getElementById('i').addEventListener('input', () => {
+  localStorage.setItem('ai-input-draft', document.getElementById('i').value);
 });
 </script>
 </body>
