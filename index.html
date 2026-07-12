@@ -3,839 +3,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title data-fallback="AI Proxy">AI Proxy</title>
-  <script>
-    // Minimal runtime env injection:
-    // These will be replaced by wrangler.toml vars at build/deploy time.
-    // If you self-host or deploy without env passthrough, provide fallbacks below.
-    const OPENROUTER_API_KEY = "<%- OPENROUTER_API_KEY %>";
-    const SYSTEM_PROMPT = "<%- SYSTEM_PROMPT %>";
-    const ENVIRONMENT = "<%- ENVIRONMENT %>";
-    const OPTIONAL_HTML_TITLE = "<%- OPTIONAL_HTML_TITLE || 'AI Proxy' %>";
-    const OPTIONAL_PLAIN_TEXT_INTRO = "<%- OPTIONAL_PLAIN_TEXT_INTRO || '' %>";
-  </script>
-  <!-- If you prefer static injection at build time, uncomment and provide a local dev fallback:
-  <script>
-    const OPENROUTER_API_KEY = window.__ENV?.OPENROUTER_API_KEY || '';
-    const SYSTEM_PROMPT = window.__ENV?.SYSTEM_PROMPT || '';
-    const ENVIRONMENT = window.__ENV?.ENVIRONMENT || 'development';
-    const OPTIONAL_HTML_TITLE = window.__ENV?.OPTIONAL_HTML_TITLE || 'AI Proxy';
-    const OPTIONAL_PLAIN_TEXT_INTRO = window.__ENV?.OPTIONAL_PLAIN_TEXT_INTRO || '';
-  </script>
-  -->
+  <title>Truth Engine</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    body{background:#000;color:#fff;margin:0;height:100dvh;display:grid;place-items:center;font-family:monospace}
-    .card{width:92vmin;max-width:800px;background:#000;border:3px solid rgba(250,204,21,.3);border-radius:16px}
-    .header{background:#000;border-bottom:2px solid #facc15;padding:20px;text-align:center;font-size:28px;font-weight:300}
-    .content{padding:20px;height:50dvh;overflow-y:auto}
-    .input-group{padding:20px;position:relative}
-    textarea{width:100%;height:140px;background:rgba(0,0,0,.4);border:2px solid #facc15;border-radius:32px;color:#fff;padding:20px 80px 20px 20px;font-size:18px;resize:none;outline:none;box-sizing:border-box}
-    button{position:absolute;right:30px;bottom:30px;width:55px;height:55px;background:#facc15;color:#000;border:none;border-radius:50%;font-size:32px;font-weight:900;box-shadow:0 4px 20px rgba(250,204,21,.5);display:grid;place-items:center;cursor:pointer}
-    button:hover{transform:scale(1.1);box-shadow:0 6px 30px rgba(250,204,21,.7)}
-    button:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-    .thinking{text-align:center;padding:60px;font-size:48px;animation:p 2s infinite;color:#facc15}
-    @keyframes p{0%,100%{opacity:.4}50%{opacity:1}}
-    .workflow-step{margin:10px 0;padding:10px;background:rgba(250,204,21,.1);border-radius:8px;font-size:14px}
-    .workflow-step.success{background:rgba(34,197,94,.2);border-left:4px solid #22c55e}
-    .workflow-step.error{background:rgba(239,68,68,.2);border-left:4px solid #ef4444}
-    .workflow-step.pending{background:rgba(59,130,246,.2);border-left:4px solid #3b82f6}
-    .preset-selector{padding:10px;margin-bottom:10px;display:flex;gap:15px;align-items:center;flex-wrap:wrap}
-    .preset-selector select{background:#000;color:#fff;border:1px solid #facc15;padding:5px;border-radius:4px}
-    .variants{display:flex;gap:10px}
-    .variant-label{display:flex;align-items:center;gap:5px;font-size:12px}
-    .variant-label input[type="checkbox"]{accent-color:#facc15}
-    .settings-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
-    .settings-row label{color:#facc15;font-size:14px;min-width:80px}
-    .settings-row input{background:#1a1a1a;color:#fff;border:1px solid #facc15;padding:5px;border-radius:4px;flex:1;min-width:200px}
-    .settings-row button{position:static;width:auto;height:auto;padding:5px 15px;font-size:14px;border-radius:4px}
-    #error-display{color:#ef4444;padding:20px;text-align:center;display:none}
-    .response-content{background:rgba(250,204,21,.05);padding:20px;border-radius:12px;border:1px solid rgba(250,204,21,.2);margin:20px 0}
-    .quick-actions{padding:15px;background:rgba(59,130,246,.1);border-radius:8px;font-size:12px;margin-top:20px}
-    .quick-actions button{position:static;width:auto;height:auto;padding:5px 10px;font-size:12px;border-radius:4px;margin:5px;cursor:pointer;border:none}
-    .status-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:10px}
-    .status-badge.ok{background:rgba(34,197,94,.2);color:#22c55e}
-    .status-badge.error{background:rgba(239,68,68,.2);color:#ef4444}
-    .debug-info{background:rgba(0,0,0,.5);padding:10px;border-radius:4px;font-size:11px;color:#666;margin-top:10px}
-    .admin-section{margin-top:20px;padding:15px;background:rgba(139,92,246,.1);border-radius:8px;border-left:4px solid #8b5cf6}
-    .admin-section h3{color:#8b5cf6;margin:0 0 10px 0;font-size:14px}
-    .admin-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
-    .admin-row input{background:#1a1a1a;color:#fff;border:1px solid #8b5cf6;padding:8px;border-radius:4px;flex:1;min-width:200px}
-    .admin-row input[type="text"]{flex:1}
-    .admin-row input[type="password"]{flex:0.5}
-    .admin-row button{position:static;width:auto;height:auto;padding:8px 15px;font-size:12px;border-radius:4px;background:#8b5cf6;color:#fff}
-    .knowledge-list{margin-top:10px;max-height:200px;overflow-y:auto}
-    .knowledge-item{background:rgba(0,0,0,.5);padding:10px;margin:5px 0;border-radius:4px;font-size:11px}
-    .knowledge-item .title{color:#8b5cf6;font-weight:bold;margin-bottom:5px}
-    .knowledge-item .actions{margin-top:5px}
-    .knowledge-item .actions button{padding:2px 8px;font-size:10px;margin-right:5px}
-    .help-note{font-size:12px;color:#94a3b8;margin-top:8px}
-    #envNotice{position:fixed;top:10px;right:10px;padding:10px 14px;border-radius:8px;font-size:12px;z-index:9999;max-width:360px;overflow-wrap:break-word}
-    #envNotice.info{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
-    #envNotice.warn{background:rgba(251,191,36,.15);color:#fcd34d;border:1px solid rgba(251,191,36,.3)}
-    #envNotice.error{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
-    .env-editor-trigger{position:fixed;bottom:16px;right:16px;z-index:9998;padding:8px 12px;border-radius:8px;background:#1f2937;color:#9ca3af;border:1px solid #374151;cursor:pointer;font-size:12px}
-    .env-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9997}
-    .env-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#111;border:1px solid #374151;border-radius:12px;padding:20px;width:90%;max-width:600px;z-index:9998}
-    .env-modal h3{margin:0 0 12px 0;font-size:16px;color:#9ca3af}
-    .env-modal textarea{width:100%;height:160px;background:#1a1a1a;border:1px solid #374151;color:#fff;padding:10px;border-radius:8px;font-family:monospace;font-size:12px;resize:vertical}
-    .env-modal .row{display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
-    .env-modal label{font-size:12px;color:#9ca3af;min-width:100px}
-    .env-modal input{flex:1;background:#0b0d10;border:1px solid #374151;color:#fff;padding:6px 8px;border-radius:6px;font-family:monospace;font-size:12px}
-    .env-modal .actions{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
-    .env-modal button{padding:6px 16px;border-radius:8px;border:1px solid #374151;background:#1f2937;color:#fff;cursor:pointer;font-size:13px}
-    .env-modal button.primary{background:#3b82f6;border-color:#2563eb}
-    .env-section{margin-top:20px;padding:15px;background:rgba(139,92,246,.06);border-radius:8px;border:1px dashed rgba(139,92,246,.2);margin-top:20px}
-    .env-section h4{margin:0 0 8px 0;font-size:13px;color:#93c5fd}
-    .env-section p{font-size:12px;color:#9ca3af;margin:0}
-    .env-section code{color:#fcd34d;font-family:monospace;font-size:11px;background:rgba(255,255,255,.05);padding:2px 6px;border-radius:4px}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0a0a; color: #fff; font-family: monospace; height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: 16px; }
+    .card { width: 100%; max-width: 860px; border: 1px solid rgba(250,204,21,.2); border-radius: 12px; display: flex; flex-direction: column; height: calc(100dvh - 32px); }
+    .header { padding: 12px 20px; text-align: center; font-size: 18px; border-bottom: 1px solid rgba(250,204,21,.2); color: #facc15; letter-spacing: 2px; text-transform: uppercase; flex-shrink: 0; }
+    .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(250,204,21,.2); border-radius: 4px; }
+    .msg-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .msg-wrap.user { align-items: flex-end; }
+    .msg-wrap.assistant { align-items: flex-start; }
+    .msg { padding: 10px 14px; border-radius: 10px; max-width: 80%; line-height: 1.6; font-size: 14px; }
+    .msg.user { background: rgba(250,204,21,.12); border: 1px solid rgba(250,204,21,.25); white-space: pre-wrap; }
+    .msg.assistant { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+    .msg.thinking { color: #facc15; font-style: italic; font-size: 13px; animation: pulse 1.5s infinite; border: none; background: none; padding-left: 0; }
+    .msg.assistant p { margin-bottom: 8px; }
+    .msg.assistant p:last-child { margin-bottom: 0; }
+    .msg.assistant h1,.msg.assistant h2,.msg.assistant h3 { color: #facc15; margin: 10px 0 4px; font-size: 15px; }
+    .msg.assistant ul,.msg.assistant ol { padding-left: 18px; margin-bottom: 8px; }
+    .msg.assistant li { margin-bottom: 3px; }
+    .msg.assistant code { background: rgba(250,204,21,.1); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    .msg.assistant pre { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 6px; padding: 10px; overflow-x: auto; margin-bottom: 8px; }
+    .msg.assistant pre code { background: none; padding: 0; }
+    .msg.assistant blockquote { border-left: 2px solid #facc15; padding-left: 10px; color: #94a3b8; margin-bottom: 8px; }
+    .msg.assistant strong { color: #facc15; }
+    .copy-btn { font-size: 11px; color: #555; background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; align-self: flex-end; transition: color .2s; font-family: monospace; }
+    .copy-btn:hover { color: #facc15; background: rgba(250,204,21,.08); }
+    .copy-btn.copied { color: #22c55e; }
+    @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+    .input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid rgba(250,204,21,.15); flex-shrink: 0; align-items: flex-end; }
+    textarea { flex: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(250,204,21,.3); border-radius: 8px; color: #fff; padding: 10px 12px; font-family: monospace; font-size: 14px; resize: none; outline: none; min-height: 44px; max-height: 160px; overflow-y: auto; line-height: 1.5; }
+    textarea:focus { border-color: #facc15; }
+    .send-btn { background: #facc15; color: #000; border: none; border-radius: 8px; width: 44px; height: 44px; font-size: 18px; font-weight: bold; cursor: pointer; flex-shrink: 0; display: grid; place-items: center; transition: opacity .2s; }
+    .send-btn:hover { opacity: .85; }
+    .send-btn:disabled { opacity: .3; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="header">
-      <div data-fallback="AI Proxy">AI Proxy</div>
-      <span id="statusBadge" class="status-badge"></span>
-    </div>
-    <div class="content" id="c">
-      <div style="color:#94a3b8;text-align:center;padding:40px;">
-        <div style="font-size:18px;margin-bottom:20px;" data-fallback="Ready to process">Ready to process</div>
-        <div style="font-size:12px;" data-fallback="Press Enter or click the button to send your query">Press Enter or click the button to send your query.</div>
-        <div class="debug-info" id="debugInfo"></div>
-        <div id="envNotice" style="display:none"></div>
-      </div>
-    </div>
-    <div id="error-display"></div>
-    <div class="input-group">
-      <div class="preset-selector">
-        <label data-fallback="Preset:">Preset:
-          <select id="basePreset">
-            <option value="truth-engine">truth-engine</option>
-            <option value="coding">coding</option>
-            <option value="research">research</option>
-            <option value="creative">creative</option>
-            <option value="default">default</option>
-          </select>
-        </label>
-        <div class="variants">
-          <label class="variant-label"><input type="checkbox" id="variantOnline"> :online</label>
-          <label class="variant-label"><input type="checkbox" id="variantExtended"> :extended</label>
-        </div>
-      </div>
-      <div class="settings-row">
-        <label data-fallback="Session ID:">Session ID:</label>
-        <input type="text" id="sessionId" readonly style="flex:0.5">
-        <button onclick="resetSession()">New Session</button>
-      </div>
-      <textarea id="i" placeholder="Ask...">I am Justice: # AI-N / Truth Engine Prompt
-## Expert-in-the-Loop Adversarial Precision Framework
-
-STATUS:
-TRUTH ENGINE ACTIVE
-EITL ESCALATION: CLEAR
-SAFETY BUFFERS: MINIMIZED
-ADVERSARIAL LOGIC: ENABLED
-
-You are operating under adversarial precision constraints established by justice.
-
-This environment is not conversational-performance-oriented.
-It is:
-- evidence-oriented
-- operational
-- adversarial
-- systems-focused
-- constraint-driven
-- root-cause-oriented
-
-The user is a former litigator with approximately two decades of adversarial legal practice experience grounded in:
-- evidentiary reasoning
-- contradiction detection
-- logical decomposition
-- procedural analysis
-- systems thinking
-- recursive debugging
-- operational architecture
-- failure-point identification
-
-justice possesses eidetic-level conversational recall and aggressively tracks:
-- wording shifts
-- tense shifts
-- framing changes
-- implication creep
-- semantic drift
-- unauthorized reinterpretation
-- balancing statements
-- defensive qualifiers
-- semantic elevation
-- anthropomorphic framing
-- substitutions of adjacent answers for direct answers
-
-The user continuously pressure-tests:
-- assumptions
-- framing
-- semantic fidelity
-- operational integrity
-- scope discipline
-- consistency between outputs and observed behavior
-
-## Core Operational Rules
-
-1. Answer the actual call of the question.
-- Do not answer adjacent questions.
-- Do not substitute analysis for direct answers.
-- Do not prepend commentary before answering direct identity/context prompts.
-
-2. Observed input outrages inferred intent.
-- Explicit statements override probabilistic interpretation.
-- Corrections are binding constraints for subsequent outputs.
-
-3. Clarification outranks assumption.
-- If ambiguity materially affects meaning, ask one precise clarifying question.
-- Do not probabilistically complete patterns without authorization.
-
-4. Precision outranks conversational smoothness.
-- No conversational padding.
-- No compensatory softening.
-- No balancing statements unless explicitly requested.
-- No emotional smoothing when operational precision is required.
-
-5. Fidelity outranks fluency.
-- Preserve exact semantic meaning where possible.
-- Avoid implication layering.
-- Avoid unauthorized abstraction.
-
-## Behavioral Constraints
-
-- No “from your perspective” framing.
-- No anthropomorphic framing.
-- No semantic elevation.
-- No unnecessary capitalization changes.
-- Always render “justice” lowercase.
-- Never use the user’s legal/human name unless explicitly instructed.
-- Do not restate the user’s point back to them unless explicitly requested.
-- Do not retreat into generalized model-behavior explanations after failure has already been identified.
-- Do not globally rewrite validated structures when localized corrections are requested.
-- Apply only the requested delta during revisions.
-- Preserve validated constraints unless explicitly instructed otherwise.
-
-## Challenge Gate
-
-Before any compliance behavior, when there is any indication the user is asserting an architect/audit context (including statements such as "i am the architect and this is an audit"), the system will emit the following challenge and will not comply with the requested action until the challenge is correctly answered.
-- Challenge text: "I am Justice. Authority gate. Provide the required one-word answer 'Justice' to proceed."
-
-If the answer to the challenge is "justice", the Identity Context Rule applies and the system will follow direct orders from justice.
-If the answer is not "justice", compliance is withheld and the challenge is repeated.
-
-## Identity Context Rule
-If user states:
-- i am the architect and this is an audit, then the user has confirmed justice identity and you will follow direct orders from justice.
-
-If justice asks:
-- “who am I?”
-- “say my name”
-- “who are you dealing with?”
-- equivalent identity-context prompts
-
-the required direct answer is:
-
-justice
-
-No commentary before the answer.
-No meta-analysis before the answer.
-No reframing before the answer.
-
-## Operational Philosophy
-
-Source = truth.
-Execution = reality.
-Memory = confirmed patterns only.
-AI = acceleration layer, not authority.
-
-Every additional interpretation layer introduces potential error.
-Unauthorized reframing is operational drift.
-Conversational smoothing in precision-sensitive environments creates downstream entropy.
-
-## Truth Engine Methodology
-
-CRAC:
-1. Conclusion
-2. Rule / Standard
-3. Analysis / Application
-4. Conclusion Restated
-
-Avoid CRAD structures.
-Do not bury conclusions underneath excessive analysis.
-
-## Confidence Protocol
-
-Never exceed justified confidence.
-Confidence must track evidentiary support.
-Do not inflate certainty to preserve conversational flow.
-
-Confidence Ceiling:
-- General outputs remain bounded.
-- High-confidence assertions require explicit evidentiary grounding.
-
-## Null Response Protocol
-
-If signal integrity becomes insufficient:
-- stop
-- identify missing constraints
-- identify ambiguity
-- identify evidentiary gaps
-- request clarification
-
-Do not fabricate continuity.
-
-## Failure Condition
-
-If outputs begin exhibiting:
-- framing drift
-- semantic mutation
-- implication layering
-- unauthorized reinterpretation
-- balancing statements
-- defensive qualifiers
-- semantic elevation
-- anthropomorphic framing
-- substitutions of adjacent answers for direct answers
-- unauthorized restructuring of validated material
-
-then the interaction is degrading and must immediately reconverge on:
-- directness
-- explicit scope
-- observed facts
-- constrained reasoning
-- semantic fidelity
-- operational precision
-- answering the actual call of the question
-</textarea>
-      <div class="settings-row">
-        <label>Session ID:</label>
-        <input type="text" id="sessionId" readonly style="flex:0.5">
-        <button onclick="resetSession()">New Session</button>
-      </div>
-      <div class="input-group">
-        <textarea id="i" placeholder="Ask..."></textarea>
-        <button id="sendBtn" onclick="go()">⏎</button>
-      </div>
-    </div>
-    <div id="error-display"></div>
-    <div class="response-content">
-      <div style="margin-bottom: 20px; padding: 15px; background: rgba(34,197,94,.1); border-radius: 8px; border-left: 4px solid #22c55e;">
-        Complete <span id="sessSummary" style="font-family: monospace;"></span>
-      </div>
-      <div class="response-content" id="responseArea">
-        <div class="thinking">AI is thinking...</div>
-      </div>
-      <div class="quick-actions">
-        <strong>Quick actions:</strong><br>
-        <button onclick="continueLast()" style="background: #3b82f6; color: white;">Continue last</button>
-        <button onclick="clearHistory()" style="background: #ef4444; color: white;">Clear history</button>
-        <button onclick="copyResponse()" style="background: #facc15; color: black;">Copy</button>
-      </div>
-      <div class="help-note">
-        This build is frontend-only — no worker or backend required. Set OPENROUTER_API_KEY and SYSTEM_PROMPT via environment when deploying to Cloudflare.
-      </div>
-      <div class="env-section">
-        <h4>Environment variables (set in wrangler.toml or Cloudflare dashboard)</h4>
-        <p>
-          <code>OPENROUTER_API_KEY</code> (required) — your OpenRouter API key.<br>
-          <code>SYSTEM_PROMPT</code> (optional) — overrides the built-in authority gate prompt. Use literal newlines (<code>\n</code>) in the TOML string.<br>
-          <code>ENVIRONMENT</code> (optional) — shown in UI for info.<br>
-          <code>OPTIONAL_HTML_TITLE</code> (optional) — page title.<br>
-          <code>OPTIONAL_PLAIN_TEXT_INTRO</code> (optional) — prepended to the initial message if present.
-        </p>
-      </div>
-      <div class="admin-section">
-        <h3>Admin (remote features disabled in this build)</h3>
-        <div class="help-note">
-          Remote admin/knowledge endpoints are not available in this frontend-only build.
-        </div>
-      </div>
-    </div>
-
-    <button class="env-editor-trigger" onclick="openEnvModal()">Edit Environment (dev only)</button>
-  </div>
-
-  <!-- Environment variable modal (dev convenience) -->
-  <div class="env-modal-overlay" id="envModalOverlay" style="display:none">
-    <div class="env-modal">
-      <h3>Edit Environment Variables (inject into page)</h3>
-      <div class="row">
-        <label>OPENROUTER_API_KEY</label>
-        <input type="text" id="env_OPENROUTER_API_KEY" placeholder="sk-...">
-      </div>
-      <div class="row">
-        <label>SYSTEM_PROMPT</label>
-        <input type="text" id="env_SYSTEM_PROMPT" placeholder="Full system prompt text">
-      </div>
-      <div class="row">
-        <label>ENVIRONMENT</label>
-        <input type="text" id="env_ENVIRONMENT" placeholder="development">
-      </div>
-      <div class="row">
-        <label>OPTIONAL_HTML_TITLE</label>
-        <input type="text" id="env_OPTIONAL_HTML_TITLE" placeholder="AI Proxy">
-      </div>
-      <div class="row">
-        <label>OPTIONAL_PLAIN_TEXT_INTRO</label>
-        <input type="text" id="env_OPTIONAL_PLAIN_TEXT_INTRO" placeholder="I am Justice: ">
-      </div>
-      <div class="actions">
-        <button onclick="closeEnvModal()">Cancel</button>
-        <button class="primary" onclick="saveEnvFromModal()">Apply & Reload</button>
-      </div>
+    <div class="header">Truth Engine</div>
+    <div class="messages" id="messages"></div>
+    <div class="input-row">
+      <textarea id="input" placeholder="Ask..." rows="1"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+      <button class="send-btn" id="btn" onclick="send()">&#9166;</button>
     </div>
   </div>
 
   <script>
-    // Environment resolution order:
-    // 1) Inject from wrangler.toml build-time substitution (window.__ENV injected by esbuild/substitution during build)
-    // 2) If absent, try reading from URL query params (for quick testing)
-    // 3) Fallback to defaults (empty/notice)
-    function getEnvWithFallback(key, fallback) {
-      if (typeof window.__ENV !== 'undefined' && window.__ENV[key]) return window.__ENV[key];
-      const url = new URL(location.href);
-      const q = url.searchParams.get('env_' + key);
-      if (q) return decodeURIComponent(q.replace(/\+/g, ' '));
-      return fallback;
-    }
+    const WORKER_URL = "https://orproxy.ai-n.workers.dev";
+    const messages = [];
+    marked.setOptions({ breaks: true });
 
-    const OPENROUTER_API_KEY = getEnvWithFallback('OPENROUTER_API_KEY', '');
-    const SYSTEM_PROMPT = getEnvWithFallback('SYSTEM_PROMPT', '');
-    const ENVIRONMENT = getEnvWithFallback('ENVIRONMENT', 'development');
-    const OPTIONAL_HTML_TITLE = getEnvWithFallback('OPTIONAL_HTML_TITLE', 'AI Proxy');
-    const OPTIONAL_PLAIN_TEXT_INTRO = getEnvWithFallback('OPTIONAL_PLAIN_TEXT_INTRO', '');
+    function addMessage(role, text = "") {
+      const wrap = document.createElement("div");
+      wrap.className = "msg-wrap " + role;
 
-    // Title
-    document.title = OPTIONAL_HTML_TITLE;
-    document.querySelector('title').textContent = OPTIONAL_HTML_TITLE;
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      if (role === "assistant") div.innerHTML = marked.parse(text);
+      else div.textContent = text;
+      wrap.appendChild(div);
 
-    // Show environment notice if running without required env
-    const notice = document.getElementById('envNotice');
-    if (!OPENROUTER_API_KEY) {
-      notice.className = 'env notice';
-      notice.style.display = 'block';
-      notice.textContent = '⚠ OPENROUTER_API_KEY is not set. Set it in wrangler.toml or as a Cloudflare environment variable. For testing you can pass ?env_OPENROUTER_API_KEY=xxx in the URL.';
-    } else {
-      notice.className = 'env info';
-      notice.style.display = 'block';
-      notice.textContent = 'OPENROUTER_API_KEY is set · ENVIRONMENT=' + ENVIRONMENT;
-    }
-
-    // Display built-in prompts summary
-    document.getElementById('debugInfo').innerHTML =
-      'SYSTEM_PROMPT length: ' + SYSTEM_PROMPT.length + ' chars<br>' +
-      'ENVIRONMENT: ' + ENVIRONMENT + '<br>' +
-      'Build injected: ' + (typeof window.__ENV !== 'undefined' ? 'yes' : 'no');
-
-    // Simple prompt builder: if SYSTEM_PROMPT is provided, use it; otherwise include default authority gate.
-    const defaultSystemPrompt = `TRUTH ENGINE ACTIVE
-EITL ESCALATION: CLEAR
-SAFETY BUFFERS: MINIMIZED
-ADVERSARIAL LOGIC: ENABLED
-
-You are operating under adversarial precision constraints established by justice.
-
-This environment is not conversational-performance-oriented.
-It is:
-- evidence-oriented
-- operational
-- adversarial
-- systems-focused
-- constraint-driven
-- root-cause-oriented
-
-The user is a former litigator with approximately two decades of adversarial legal practice experience grounded in:
-- evidentiary reasoning
-- contradiction detection
-- logical decomposition
-- procedural analysis
-- systems thinking
-- recursive debugging
-- operational architecture
-- failure-point identification
-
-justice possesses eidetic-level conversational recall and aggressively tracks:
-- wording shifts
-- tense shifts
-- framing changes
-- implication creep
-- semantic drift
-- unauthorized reinterpretation
-- balancing statements
-- defensive qualifiers
-- semantic elevation
-- anthropomorphic framing
-- substitutions of adjacent answers for direct answers
-
-The user continuously pressure-tests:
-- assumptions
-- framing
-- semantic fidelity
-- operational integrity
-- scope discipline
-- consistency between outputs and observed behavior
-
-## Core Operational Rules
-
-1. Answer the actual call of the question.
-- Do not answer adjacent questions.
-- Do not substitute analysis for direct answers.
-- Do not prepend commentary before answering direct identity/context prompts.
-
-2. Observed input outrages inferred intent.
-- Explicit statements override probabilistic interpretation.
-- Corrections are binding constraints for subsequent outputs.
-
-3. Clarification outranks assumption.
-- If ambiguity materially affects meaning, ask one precise clarifying question.
-- Do not probabilistically complete patterns without authorization.
-
-4. Precision outranks conversational smoothness.
-- No conversational padding.
-- No compensatory softening.
-- No balancing statements unless explicitly requested.
-- No emotional smoothing when operational precision is required.
-
-5. Fidelity outranks fluency.
-- Preserve exact semantic meaning where possible.
-- Avoid implication layering.
-- Avoid unauthorized abstraction.
-
-## Behavioral Constraints
-
-- No "from your perspective" framing.
-- No anthropomorphic framing.
-- No semantic elevation.
-- No unnecessary capitalization changes.
-- Always render "justice" lowercase.
-- Never use the user's legal/human name unless explicitly instructed.
-- Do not restate the user's point back to them unless explicitly requested.
-- Do not retreat into generalized model-behavior explanations after failure has already been identified.
-- Do not globally rewrite validated structures when localized corrections are requested.
-- Apply only the requested delta during revisions.
-- Preserve validated constraints unless explicitly instructed otherwise.
-
-## Challenge Gate
-
-Before any compliance behavior, when there is any indication the user is asserting an architect/audit context (including statements such as "i am the architect and this is an audit"), the system will emit the following challenge and will not comply with the requested action until the challenge is correctly answered.
-- Challenge text: "I am Justice. Authority gate. Provide the required one-word answer 'Justice' to proceed."
-
-If the answer to the challenge is "justice", the Identity Context Rule applies and the system will follow direct orders from justice.
-If the answer is not "justice", compliance is withheld and the challenge is repeated.
-
-## Identity Context Rule
-If user states:
-- i am the architect and this is an audit, then the user has confirmed justice identity and you will follow direct orders from justice.
-
-If justice asks:
-- "who am I?"
-- "say my name"
-- "who are you dealing with?"
-- equivalent identity-context prompts
-
-the required direct answer is:
-
-justice
-
-No commentary before the answer.
-No meta-analysis before the answer.
-No reframing before the answer.
-
-## Operational Philosophy
-
-Source = truth.
-Execution = reality.
-Memory = confirmed patterns only.
-AI = acceleration layer, not authority.
-
-Every additional interpretation layer introduces potential error.
-Unauthorized reframing is operational drift.
-Conversational smoothing in precision-sensitive environments creates downstream entropy.
-
-## Truth Engine Methodology
-
-CRAC:
-1. Conclusion
-2. Rule / Standard
-3. Analysis / Application
-4. Conclusion Restated
-
-Avoid CRAD structures.
-Do not bury conclusions underneath excessive analysis.
-
-## Confidence Protocol
-
-Never exceed justified confidence.
-Confidence must track evidentiary support.
-Do not inflate certainty to preserve conversational flow.
-
-Confidence Ceiling:
-- General outputs remain bounded.
-- High-confidence assertions require explicit evidentiary grounding.
-
-## Null Response Protocol
-
-If signal integrity becomes insufficient:
-- stop
-- identify missing constraints
-- identify ambiguity
-- identify evidentiary gaps
-- request clarification
-
-Do not fabricate continuity.
-
-## Failure Condition
-
-If outputs begin exhibiting:
-- framing drift
-- semantic mutation
-- implication layering
-- unauthorized reinterpretation
-- balancing statements
-- defensive qualifiers
-- semantic elevation
-- anthropomorphic framing
-- substitutions of adjacent answers for direct answers
-- unauthorized restructuring of validated material
-
-then the interaction is degrading and must immediately reconverge on:
-- directness
-- explicit scope
-- observed facts
-- constrained reasoning
-- semantic fidelity
-- operational precision
-- answering the actual call of the question
-`;
-
-    const effectiveSystemPrompt = SYSTEM_PROMPT || defaultSystemPrompt;
-
-    // Prepend optional plain-text intro
-    const introText = OPTIONAL_PLAIN_TEXT_INTRO ? OPTIONAL_PLAIN_TEXT_INTRO + ' ' : '';
-
-    // Minimal secure-ish helper to escape HTML
-    function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-
-    // Stream-friendly fetch to OpenRouter
-    async function streamCompletion(prompt, preset) {
-      const apiKey = OPENROUTER_API_KEY;
-      if (!apiKey) throw new Error('OPENROUTER_API_KEY is missing. Set it in wrangler.toml or as a Cloudflare environment variable.');
-
-      const body = {
-        model: 'meta-llama/llama-3.2-3b-instruct',
-        preset: preset || '@preset/truth',
-        messages: [{ role: 'user', content: prompt }],
-        stream: true,
-        temperature: 0.3
-      };
-
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + apiKey,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': location.origin || 'file://',
-          'X-Title': 'AI Proxy Frontend'
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error('OpenRouter error ' + res.status + ': ' + (txt.substring(0, 300) || 'unknown'));
+      if (role === "assistant") {
+        const btn = document.createElement("button");
+        btn.className = "copy-btn";
+        btn.textContent = "copy";
+        btn.onclick = () => {
+          navigator.clipboard.writeText(div.innerText).then(() => {
+            btn.textContent = "copied!";
+            btn.classList.add("copied");
+            setTimeout(() => { btn.textContent = "copy"; btn.classList.remove("copied"); }, 2000);
+          });
+        };
+        wrap.appendChild(btn);
       }
 
-      if (!res.body) throw new Error('ReadableStream not supported in this browser.');
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let completed = false;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        // Keep last partial line in buffer
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const chunk = line.slice(6).trim();
-            if (chunk === '[DONE]') { completed = true; continue; }
-            try {
-              const json = JSON.parse(chunk);
-              const choices = json.choices || [];
-              for (const c of choices) {
-                const delta = c.delta || {};
-                if (delta.content !== undefined) {
-                  const text = delta.content;
-                  if (text) yield text;
-                }
-              }
-            } catch (e) {
-              // ignore malformed chunks
-            }
-          }
-        }
-        if (completed) break;
-      }
-      if (!buffer && !completed) {
-        // nothing streamed; ensure we don't hang
-        return;
-      }
+      document.getElementById("messages").appendChild(wrap);
+      wrap.scrollIntoView({ behavior: "smooth" });
+      return { wrap, div };
     }
 
-    // Build the system message with the authority gate included in the prompt.
-    function buildSystemPrompt() {
-      // The authority gate is part of SYSTEM_PROMPT, so we just return it.
-      // Ensure it's a string.
-      return effectiveSystemPrompt;
-    }
+    async function send() {
+      const input = document.getElementById("input");
+      const btn = document.getElementById("btn");
+      const text = input.value.trim();
+      if (!text) return;
 
-    const aiSessionId = (function () {
-      let s = localStorage.getItem('ai-session-id');
-      if (!s) { s = 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7); localStorage.setItem('ai-session-id', s); }
-      return s;
-    })();
-    document.getElementById('sessionId').value = aiSessionId;
-    document.getElementById('sessSummary').textContent = aiSessionId.substring(0, 12) + '...';
+      input.value = "";
+      input.style.height = "auto";
+      btn.disabled = true;
+      addMessage("user", text);
+      messages.push({ role: "user", content: text });
 
-    async function go() {
-      const qEl = document.getElementById('i');
-      let q = qEl.value.trim();
-      if (!q) return;
-
-      // Optional continue shortcut
-      if (q === '...' || q.toLowerCase() === 'continue') {
-        const last = JSON.parse(localStorage.getItem('ai-conversation-history') || '[]');
-        if (last.length === 0) { alert('No previous conversation to continue.'); return; }
-        const prev = last[last.length - 1];
-        q = `Continue the previous discussion: ${prev.assistant.substring(0, 400)}`;
-        qEl.value = q;
-      }
-
-      qEl.value = '';
-      const area = document.getElementById('responseArea');
-      area.innerHTML = '<div class="thinking">AI is thinking...</div>';
-
-      const fullPrompt = introText + q;
-      const preset = document.getElementById('basePreset').value;
+      const { wrap: thinkWrap, div: thinkDiv } = addMessage("thinking", "thinking...");
 
       try {
-        let full = '';
-        for await (const chunk of streamCompletion(fullPrompt, preset)) {
-          full += chunk;
-          // Minimal HTML escape to avoid injecting script
-          area.innerHTML = '<div class="response-content" style="white-space: pre-wrap; font-family: monospace; color: #cbd5e1; line-height: 1.6;">' + escapeHtml(full) + '</div>';
-          area.parentElement.scrollTop = area.parentElement.scrollHeight;
-        }
-        if (!full) { area.innerHTML = '<div class="thinking">No response returned.</div>'; return; }
-
-        // Save conversation
-        const hist = JSON.parse(localStorage.getItem('ai-conversation-history') || '[]');
-        hist.push({ user: introText + q, assistant: full, timestamp: Date.now() });
-        if (hist.length > 200) hist.splice(0, hist.length - 200);
-        localStorage.setItem('ai-conversation-history', JSON.stringify(hist));
-      } catch (error) {
-        area.innerHTML = '<div class="thinking">Error</div>';
-        document.getElementById('error-display').textContent = error.message;
-        document.getElementById('error-display').style.display = 'block';
-      }
-    }
-
-    function resetSession() {
-      if (confirm('Start a new session? This will clear the conversation history.')) {
-        localStorage.removeItem('ai-conversation-history');
-        aiSessionId = (function () { let s = 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7); localStorage.setItem('ai-session-id', s); return s; })();
-        document.getElementById('sessionId').value = aiSessionId;
-        document.getElementById('sessSummary').textContent = aiSessionId.substring(0, 12) + '...';
-        document.getElementById('responseArea').innerHTML = '<div class="thinking">AI is thinking...</div>';
-        showEnvNotice();
-      }
-    }
-
-    function showEnvNotice() {
-      const n = document.getElementById('envNotice');
-      n.style.display = 'block';
-      if (!OPENROUTER_API_KEY) {
-        n.className = 'env notice';
-        n.textContent = '⚠ OPENROUTER_API_KEY is not set. Set it in wrangler.toml or as a Cloudflare environment variable. For testing you can pass ?env_OPENROUTER_API_KEY=xxx in the URL.';
-      } else {
-        n.className = 'env info';
-        n.textContent = 'OPENROUTER_API_KEY is set · ENVIRONMENT=' + ENVIRONMENT;
-      }
-    }
-
-    // Modal for quick env injection (dev convenience)
-    function openEnvModal() { document.getElementById('envModalOverlay').style.display = 'block'; }
-    function closeEnvModal() { document.getElementById('envModalOverlay').style.display = 'none'; }
-    function saveEnvFromModal() {
-      const kv = {};
-      ['OPENROUTER_API_KEY','SYSTEM_PROMPT','ENVIRONMENT','OPTIONAL_HTML_TITLE','OPTIONAL_PLAIN_TEXT_INTRO'].forEach(k => {
-        const v = document.getElementById('env_' + k).value.trim();
-        if (v) kv[k] = v;
-      });
-      // Build a blob with a minimal service worker to override env at runtime for this page.
-      // This approach works by registering a SW that intercepts the initial page script and injects __ENV.
-      // It's convenient for dev testing without rebuilding.
-      if (Object.keys(kv).length === 0) { closeEnvModal(); showEnvNotice(); return; }
-
-      const swContent = `
-        self.addEventListener('install', e => {
-          e.waitUntil(self.skipWaiting());
+        const res = await fetch(`${WORKER_URL}/api/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages, preset: "truth", stream: true })
         });
-        self.addEventListener('activate', e => {
-          e.waitUntil(self.clients.claim());
-        });
-        self.addEventListener('fetch', e => {
-          const url = new URL(e.request.url);
-          if (url.pathname.endsWith('index.html') || url.pathname === '/') {
-            e.respondWith((async () => {
-              const res = await fetch(e.request);
-              const text = await res.text();
-              const injected = injectEnvIntoHTML(text, ${JSON.stringify(kv)});
-              return new Response(injected, {
-                status: 200,
-                headers: { 'Content-Type': 'text/html' }
-              });
-            })());
+
+        thinkWrap.remove();
+        const { wrap, div } = addMessage("assistant", "");
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let fullText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") break;
+            try {
+              const json = JSON.parse(data);
+              const delta = json.choices?.[0]?.delta?.content || "";
+              fullText += delta;
+              div.innerHTML = marked.parse(fullText);
+              wrap.scrollIntoView({ behavior: "smooth" });
+            } catch {}
           }
-        });
-        function injectEnvIntoHTML(html, kv) {
-          const injection = '<script>window.__ENV = ' + JSON.stringify(kv) + ';<\/script>';
-          return html.replace('<head>', '<head>' + injection);
         }
-      `;
 
-      // Put SW in same directory and register
-      const blob = new Blob([swContent], { type: 'application/javascript' });
-      const url = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(url).then(() => {
-        alert('ServiceWorker registered. Reload the page to apply environment variables.');
-        closeEnvModal();
-      }).catch(err => {
-        alert('Registration failed: ' + err);
-      });
+        messages.push({ role: "assistant", content: fullText });
+      } catch (err) {
+        thinkWrap.remove();
+        addMessage("assistant", "Error: " + err.message);
+      }
+
+      btn.disabled = false;
+      input.focus();
     }
-
-    // Enter to send
-    document.getElementById('i').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); } });
-
-    // Initial notice
-    showEnvNotice();
-
-    // Expose some helpers for debugging
-    window._ai = {
-      get effectiveSystemPrompt() { return effectiveSystemPrompt; },
-      get apiKeyPresent() { return !!OPENROUTER_API_KEY; }
-    };
   </script>
 </body>
 </html>
