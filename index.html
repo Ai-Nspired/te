@@ -8,15 +8,15 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0a0a0a; color: #e2e8f0; font-family: monospace; height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: 16px; }
-    
-    .card { 
-      width: 100%; 
-      max-width: 860px; 
-      border: 1px solid rgba(250,204,21,.15); 
-      border-radius: 8px; 
-      display: flex; 
-      flex-direction: column; 
-      height: calc(100dvh - 32px); 
+
+    .card {
+      width: 100%;
+      max-width: 860px;
+      border: 1px solid rgba(250,204,21,.15);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100dvh - 32px);
       background: #0d0d0d;
       transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
@@ -25,69 +25,91 @@
       box-shadow: 0 0 20px rgba(250,204,21,.03);
     }
 
-    .header { 
-      padding: 14px 20px; 
-      font-size: 14px; 
-      border-bottom: 1px solid rgba(250,204,21,.15); 
-      color: #facc15; 
-      letter-spacing: 2px; 
-      text-transform: uppercase; 
+    .header {
+      padding: 14px 20px;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(250,204,21,.15);
+      color: #facc15;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       flex-shrink: 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .header::after {
-      content: "SYS_STATUS: ACTIVE";
+    .header-status {
       font-size: 11px;
-      opacity: 0.7;
+      color: #22c55e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .header-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: #22c55e;
+      border-radius: 50%;
     }
 
     .messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
     .messages::-webkit-scrollbar { width: 4px; }
     .messages::-webkit-scrollbar-thumb { background: rgba(250,204,21,.2); border-radius: 4px; }
-    
-    .interaction-block { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 12px; 
+
+    .onboard{
+      display:flex;flex-direction:column;
+      justify-content:center;align-items:center;
+      height:100%;text-align:center;
+      padding:2rem;opacity:.6;
+    }
+    .onboard h2{
+      font-family:'Cinzel',serif;
+      color:#facc15;font-size:1.2rem;
+      letter-spacing:3px;text-transform:uppercase;
+      margin-bottom:1rem;
+    }
+    .onboard p{font-size:.85rem;line-height:1.7;max-width:500px;margin-bottom:.5rem}
+    .onboard .examples{
+      margin-top:1.5rem;
+      display:flex;flex-direction:column;gap:.6rem;
+    }
+    .onboard .ex{
+      font-size:.75rem;padding:.5rem 1rem;
+      background:rgba(250,204,21,.05);
+      border:1px solid rgba(250,204,21,.15);
+      border-radius:4px;cursor:pointer;
+      transition:all .2s;color:#facc15;
+    }
+    .onboard .ex:hover{
+      background:rgba(250,204,21,.1);
+      border-color:rgba(250,204,21,.4);
+    }
+
+    .interaction-block {
+      display: flex;flex-direction: column;gap: 12px;
       border-bottom: 1px solid rgba(255,255,255,.03);
       padding-bottom: 20px;
-      opacity: 0;
-      transform: translateY(4px);
+      opacity: 0;transform: translateY(4px);
       animation: fadeIn 0.25s forwards ease-out;
     }
     .interaction-block:last-child { border-bottom: none; padding-bottom: 0; }
-    
-    .prompt-line { 
-      color: #facc15; 
-      font-weight: bold; 
-      font-size: 14px; 
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
+
+    .prompt-line {
+      color: #facc15;font-weight: bold;font-size: 14px;
+      display: flex;gap: 8px;align-items: flex-start;
     }
-    .prompt-line::before {
-      content: "❯";
-      color: #facc15;
+    .prompt-line::before { content: "❯"; color: #facc15; }
+
+    .report-body {
+      line-height: 1.7;font-size: 14px;color: #cbd5e1;
+      padding-left: 18px;word-break: break-word;
     }
-    
-    .report-body { 
-      line-height: 1.7; 
-      font-size: 14px; 
-      color: #cbd5e1;
-      padding-left: 18px;
-      word-break: break-word;
+
+    .thinking-line {
+      color: #facc15;font-style: italic;font-size: 13px;
+      animation: pulse 1.5s infinite;padding-left: 18px;
     }
-    
-    .thinking-line { 
-      color: #facc15; 
-      font-style: italic; 
-      font-size: 13px; 
-      animation: pulse 1.5s infinite; 
-      padding-left: 18px;
-    }
-    
+
     .report-body p { margin-bottom: 12px; }
     .report-body p:last-child { margin-bottom: 0; }
     .report-body h1, .report-body h2, .report-body h3 { color: #facc15; margin: 18px 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
@@ -98,19 +120,26 @@
     .report-body pre code { background: none; padding: 0; color: #a7f3d0; }
     .report-body blockquote { border-left: 2px solid #facc15; padding-left: 12px; color: #94a3b8; margin: 12px 0; font-style: italic; }
     .report-body strong { color: #facc15; font-weight: bold; }
-    
-    .meta-row { display: flex; justify-content: flex-end; padding-left: 18px; margin-top: 4px; }
-    .copy-btn { font-size: 11px; color: #475569; background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all .2s; font-family: monospace; }
-    .copy-btn:hover { color: #facc15; background: rgba(250,204,21,.05); }
+    .report-body a{color:#22c55e}
+
+    .meta-row { display: flex; justify-content: flex-end; padding-left: 18px; margin-top: 4px; gap: 12px; }
+    .copy-btn, .store-btn {
+      font-size: 11px; color: #475569; background: none;
+      border: none; cursor: pointer; padding: 2px 6px;
+      border-radius: 4px; transition: all .2s; font-family: monospace;
+    }
+    .copy-btn:hover, .store-btn:hover { color: #facc15; background: rgba(250,204,21,.05); }
     .copy-btn.copied { color: #22c55e; }
-    
+    .store-btn { color: #22c55e; }
+    .store-btn:hover { background: rgba(34,197,94,.1); }
+
     @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
     @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
-    
+
     .input-row { display: flex; gap: 12px; padding: 16px 24px; border-top: 1px solid rgba(250,204,21,.15); flex-shrink: 0; align-items: flex-end; background: #0a0a0a; border-radius: 0 0 8px 8px; }
     textarea { flex: 1; background: rgba(255,255,255,.02); border: 1px solid rgba(250,204,21,.2); border-radius: 6px; color: #fff; padding: 12px; font-family: monospace; font-size: 14px; resize: none; outline: none; min-height: 44px; max-height: 160px; overflow-y: auto; line-height: 1.5; transition: border-color .2s, background .2s; }
     textarea:focus { border-color: #facc15; background: rgba(255,255,255,.04); }
-    
+
     .send-btn { background: #facc15; color: #000; border: none; border-radius: 6px; width: 64px; height: 44px; font-size: 13px; font-weight: bold; cursor: pointer; flex-shrink: 0; display: grid; place-items: center; transition: background .2s; font-family: monospace; }
     .send-btn:hover { background: #fde047; }
     .send-btn:disabled { opacity: .2; cursor: not-allowed; background: #facc15; }
@@ -118,10 +147,24 @@
 </head>
 <body>
   <div class="card">
-    <div class="header">Truth Engine</div>
-    <div class="messages" id="messages"></div>
+    <div class="header">
+      Truth Engine
+      <span class="header-status">SYS: ACTIVE</span>
+    </div>
+    <div class="messages" id="messages">
+      <div class="onboard" id="onboard">
+        <h2>TRUTH ENGINE</h2>
+        <p>Ask anything. The engine searches stored knowledge first, then the web if needed.</p>
+        <p style="font-size:.75rem;opacity:.5">Every response is traceable. Knowledge grows with each query.</p>
+        <div class="examples">
+          <div class="ex" onclick="quickAsk(this)">What is the capital of France?</div>
+          <div class="ex" onclick="quickAsk(this)">Explain quantum computing</div>
+          <div class="ex" onclick="quickAsk(this)">What are the latest AI regulations?</div>
+        </div>
+      </div>
+    </div>
     <div class="input-row">
-      <textarea id="input" placeholder="Enter query parameters..." rows="1"
+      <textarea id="input" placeholder="Ask a question..." rows="1"
         oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
       <button class="send-btn" id="btn" onclick="send()">RUN</button>
@@ -129,7 +172,7 @@
   </div>
 
   <script>
-    const WORKER_URL = "https://orproxy.ai-n.workers.dev";
+    const WORKER_URL = "http://localhost:8082";
     const messages = [];
     marked.setOptions({ breaks: true });
 
@@ -140,6 +183,12 @@
       }
     }
 
+    function quickAsk(el) {
+      const input = document.getElementById("input");
+      input.value = el.textContent;
+      send();
+    }
+
     async function send() {
       const input = document.getElementById("input");
       const btn = document.getElementById("btn");
@@ -147,10 +196,13 @@
       const text = input.value.trim();
       if (!text) return;
 
+      const onboard = document.getElementById("onboard");
+      if (onboard) onboard.remove();
+
       input.value = "";
       input.style.height = "auto";
       btn.disabled = true;
-      
+
       messages.push({ role: "user", content: text });
 
       const block = document.createElement("div");
@@ -163,7 +215,7 @@
 
       const thinkingLine = document.createElement("div");
       thinkingLine.className = "thinking-line";
-      thinkingLine.textContent = "CRUNCHING_DATA...";
+      thinkingLine.textContent = "SEARCHING KNOWLEDGE BASE...";
       block.appendChild(thinkingLine);
 
       msgBox.appendChild(block);
@@ -173,19 +225,17 @@
         const res = await fetch(`${WORKER_URL}/api/generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages, preset: "truth", stream: true })
+          body: JSON.stringify({ messages, stream: true })
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        if (thinkingLine.parentNode) {
-          thinkingLine.remove();
-        }
+        thinkingLine.textContent = "PROCESSING...";
 
         const reportBody = document.createElement("div");
         reportBody.className = "report-body";
         block.appendChild(reportBody);
-        
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder("utf-8");
         let buffer = "";
@@ -194,18 +244,18 @@
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
+
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
-          buffer = lines.pop(); 
+          buffer = lines.pop();
 
           for (const line of lines) {
             const cleaned = line.trim();
             if (!cleaned || !cleaned.startsWith("data: ")) continue;
-            
+
             const data = cleaned.slice(6).trim();
             if (data === "[DONE]") break;
-            
+
             try {
               const json = JSON.parse(data);
               const delta = json.choices?.[0]?.delta?.content || "";
@@ -232,23 +282,49 @@
           } catch(e) {}
         }
 
+        if (thinkingLine.parentNode) thinkingLine.remove();
+
         messages.push({ role: "assistant", content: fullText });
 
         const metaRow = document.createElement("div");
         metaRow.className = "meta-row";
-        
+
         const copyBtn = document.createElement("button");
         copyBtn.className = "copy-btn";
-        copyBtn.textContent = "[COPY_RECORD]";
+        copyBtn.textContent = "[COPY]";
         copyBtn.onclick = () => {
           navigator.clipboard.writeText(reportBody.innerText).then(() => {
             copyBtn.textContent = "[COPIED]";
             copyBtn.classList.add("copied");
-            setTimeout(() => { copyBtn.textContent = "[COPY_RECORD]"; copyBtn.classList.remove("copied"); }, 2000);
+            setTimeout(() => { copyBtn.textContent = "[COPY]"; copyBtn.classList.remove("copied"); }, 2000);
           });
         };
-        
+
+        const storeBtn = document.createElement("button");
+        storeBtn.className = "store-btn";
+        storeBtn.textContent = "[STORE AS TRUTH]";
+        storeBtn.onclick = async () => {
+          try {
+            await fetch(`${WORKER_URL}/api/store`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                text: reportBody.innerText,
+                title: text.substring(0, 80),
+                context_id: "validated",
+                tags: ["user-validated"]
+              })
+            });
+            storeBtn.textContent = "[STORED]";
+            storeBtn.style.color = "#22c55e";
+            setTimeout(() => storeBtn.remove(), 2000);
+          } catch(e) {
+            storeBtn.textContent = "[ERROR]";
+          }
+        };
+
         metaRow.appendChild(copyBtn);
+        metaRow.appendChild(storeBtn);
         block.appendChild(metaRow);
         scrollToBottom(msgBox, true);
 
@@ -259,7 +335,7 @@
         const errorLine = document.createElement("div");
         errorLine.className = "report-body";
         errorLine.style.color = "#ef4444";
-        errorLine.textContent = "ERR_FAILURE: " + err.message;
+        errorLine.textContent = "ERR: " + err.message;
         block.appendChild(errorLine);
       }
 
