@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Truth Engine — AI-NSPIRED</title>
+  <meta name="description" content="Truth Engine: Systemic review engine for pro per empowerment. Upload dockets, get actionable analysis.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>window.TRUTH_ENGINE_API = 'https://orproxy.ai-n.workers.dev';</script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0a0a; color: #e2e8f0; font-family: monospace; height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: 16px; }
+
+    .card {
+      width: 100%; max-width: 860px;
+      border: 1px solid rgba(250,204,21,.15); border-radius: 8px;
+      display: flex; flex-direction: column;
+      height: calc(100dvh - 32px); background: #0d0d0d;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:focus-within { border-color: rgba(250,204,21,.4); box-shadow: 0 0 20px rgba(250,204,21,.03); }
+
+    .header {
+      padding: 14px 20px; font-size: 14px;
+      border-bottom: 1px solid rgba(250,204,21,.15); color: #facc15;
+      letter-spacing: 2px; text-transform: uppercase; flex-shrink: 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .header::after { content: "SYS_STATUS: ACTIVE"; font-size: 11px; opacity: 0.7; }
+
+    .disclaimer-bar {
+      background: rgba(250,204,21,.05); border-bottom: 1px solid rgba(250,204,21,.1);
+      padding: 8px 20px; font-size: 10px; color: #94a3b8; text-align: center;
+      letter-spacing: 1px; flex-shrink: 0;
+    }
+
+    .messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(250,204,21,.2); border-radius: 4px; }
+
+    .interaction-block {
+      display: flex; flex-direction: column; gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.03);
+      padding-bottom: 20px;
+      opacity: 0; transform: translateY(4px);
+      animation: fadeIn 0.25s forwards ease-out;
+    }
+    .interaction-block:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .prompt-line { color: #facc15; font-weight: bold; font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
+    .prompt-line::before { content: ">"; color: #facc15; }
+
+    .report-body { line-height: 1.7; font-size: 14px; color: #cbd5e1; padding-left: 18px; word-break: break-word; }
+    .thinking-line { color: #facc15; font-style: italic; font-size: 13px; animation: pulse 1.5s infinite; padding-left: 18px; }
+    .report-body p { margin-bottom: 12px; }
+    .report-body p:last-child { margin-bottom: 0; }
+    .report-body h1,.report-body h2,.report-body h3 { color: #facc15; margin: 18px 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+    .report-body ul,.report-body ol { padding-left: 18px; margin-bottom: 12px; }
+    .report-body li { margin-bottom: 4px; }
+    .report-body code { background: rgba(250,204,21,.08); padding: 2px 5px; border-radius: 3px; font-size: 12px; color: #facc15; }
+    .report-body pre { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.05); border-radius: 6px; padding: 14px; overflow-x: auto; margin: 14px 0; }
+    .report-body pre code { background: none; padding: 0; color: #a7f3d0; }
+    .report-body blockquote { border-left: 2px solid #facc15; padding-left: 12px; color: #94a3b8; margin: 12px 0; font-style: italic; }
+    .report-body strong { color: #facc15; font-weight: bold; }
+
+    .meta-row { display: flex; justify-content: flex-end; padding-left: 18px; margin-top: 4px; gap: 8px; }
+    .copy-btn, .action-btn { font-size: 11px; color: #475569; background: none; border: 1px solid rgba(255,255,255,.05); cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all .2s; font-family: monospace; text-decoration: none; }
+    .copy-btn:hover, .action-btn:hover { color: #facc15; border-color: rgba(250,204,21,.3); background: rgba(250,204,21,.05); }
+    .copy-btn.copied { color: #22c55e; }
+    .action-btn.counsel { color: #3b82f6; border-color: rgba(59,130,246,.3); }
+    .action-btn.counsel:hover { background: rgba(59,130,246,.1); }
+
+    @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+    @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+    .upload-zone {
+      border: 2px dashed rgba(250,204,21,.2); border-radius: 8px;
+      padding: 16px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s; margin: 0 24px 0;
+    }
+    .upload-zone:hover { border-color: rgba(250,204,21,.5); }
+    .upload-zone svg { margin: 0 auto 8px; width: 32px; height: 32px; color: #475569; }
+    .upload-zone p { font-size: 12px; color: #64748b; }
+
+    .file-input-offscreen { position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px; }
+
+    .input-row { display: flex; gap: 12px; padding: 16px 24px; border-top: 1px solid rgba(250,204,21,.15); flex-shrink: 0; align-items: flex-end; background: #0a0a0a; border-radius: 0 0 8px 8px; }
+    textarea { flex: 1; background: rgba(255,255,255,.02); border: 1px solid rgba(250,204,21,.2); border-radius: 6px; color: #fff; padding: 12px; font-family: monospace; font-size: 14px; resize: none; outline: none; min-height: 44px; max-height: 160px; overflow-y: auto; line-height: 1.5; transition: border-color .2s, background .2s; }
+    textarea:focus { border-color: #facc15; background: rgba(255,255,255,.04); }
+
+    .send-btn { background: #facc15; color: #000; border: none; border-radius: 6px; width: 64px; height: 44px; font-size: 13px; font-weight: bold; cursor: pointer; flex-shrink: 0; display: grid; place-items: center; transition: background .2s; font-family: monospace; }
+    .send-btn:hover { background: #fde047; }
+    .send-btn:disabled { opacity: .2; cursor: not-allowed; background: #facc15; }
+
+    .footer-bar { padding: 8px 20px; border-top: 1px solid rgba(250,204,21,.08); text-align: center; font-size: 10px; color: #334155; flex-shrink: 0; }
+    .footer-bar a { color: #475569; text-decoration: none; }
+    .footer-bar a:hover { color: #facc15; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">Truth Engine</div>
+    <div class="disclaimer-bar">NOT LEGAL ADVICE — FOR INFORMATIONAL PURPOSES ONLY — CONSULT A LICENSED ATTORNEY</div>
+
+    <input type="file" id="file-input" accept=".pdf,.txt,.doc,.docx,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple class="file-input-offscreen">
+
+    <label for="file-input" class="upload-zone" style="margin-top:12px">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+      </svg>
+      <p>Upload docket, minute order, or PDF — or paste text below</p>
+    </label>
+
+    <div class="messages" id="messages"></div>
+    <div class="input-row">
+      <textarea id="input" placeholder="Enter query parameters..." rows="1"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+      <button class="send-btn" id="btn" onclick="send()">RUN</button>
+    </div>
+    <div class="footer-bar">
+      <a href="https://ai-nspired.com">Truth Engine</a> &bull;
+      <a href="https://ai-n.org">Speakeasy</a> &bull;
+      <a href="https://theofficialaicounsel.com">AI Counsel</a> &bull;
+      <a href="https://theofficialaiuniversity.com">Academy</a> &bull;
+      &copy; 2026 AI-Nspired Foundation
+    </div>
+  </div>
+
+  <script>
+    var API = window.TRUTH_ENGINE_API;
+    var chatMessages = [];
+    var currentAuditId = '';
+    var fullReport = '';
+    marked.setOptions({ breaks: true });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // File upload
+    document.getElementById('file-input').addEventListener('change', function(e) {
+      handleFiles(e.target.files);
+      e.target.value = '';
+    });
+
+    async function handleFiles(files) {
+      var input = document.getElementById('input');
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var text = '';
+        try {
+          if (file.name.toLowerCase().endsWith('.pdf')) {
+            var buf = await file.arrayBuffer();
+            var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+            for (var p = 1; p <= pdf.numPages; p++) {
+              var page = await pdf.getPage(p);
+              var content = await page.getTextContent();
+              text += content.items.map(function(item) { return item.str; }).join(' ') + '\n';
+            }
+          } else if (file.name.toLowerCase().endsWith('.docx')) {
+            var buf = await file.arrayBuffer();
+            var result = await mammoth.extractRawText({ arrayBuffer: buf });
+            text = result.value;
+          } else {
+            text = await file.text();
+          }
+        } catch (e) {
+          text = '[Error reading ' + file.name + ': ' + e.message + ']';
+        }
+        input.value += '\n\n--- ' + file.name + ' ---\n' + text;
+        input.style.height = 'auto';
+        input.style.height = input.scrollHeight + 'px';
+      }
+    }
+
+    function scrollToBottom(container, force) {
+      var isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight <= 60;
+      if (force || isAtBottom) container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function send() {
+      var input = document.getElementById('input');
+      var btn = document.getElementById('btn');
+      var msgBox = document.getElementById('messages');
+      var text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      btn.disabled = true;
+
+      // Add user message
+      chatMessages.push({ role: 'user', content: text });
+
+      var block = document.createElement('div');
+      block.className = 'interaction-block';
+
+      var promptLine = document.createElement('div');
+      promptLine.className = 'prompt-line';
+      promptLine.textContent = text;
+      block.appendChild(promptLine);
+
+      var thinkingLine = document.createElement('div');
+      thinkingLine.className = 'thinking-line';
+      thinkingLine.textContent = 'CRUNCHING_DATA...';
+      block.appendChild(thinkingLine);
+
+      msgBox.appendChild(block);
+      scrollToBottom(msgBox, true);
+
+      try {
+        var body = { messages: chatMessages.slice(), stream: true };
+
+        // If we have an audit_id, pass it for context
+        if (currentAuditId) body.audit_id = currentAuditId;
+
+        var res = await fetch(API + '/v1/audit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        if (thinkingLine.parentNode) thinkingLine.remove();
+
+        var reportBody = document.createElement('div');
+        reportBody.className = 'report-body';
+        block.appendChild(reportBody);
+
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder('utf-8');
+        var buffer = '';
+        var responseText = '';
+
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (var i = 0; i < lines.length; i++) {
+            var cleaned = lines[i].trim();
+            if (!cleaned || !cleaned.startsWith('data: ')) continue;
+            var data = cleaned.slice(6).trim();
+            if (data === '[DONE]') break;
+            try {
+              var json = JSON.parse(data);
+              var delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content || '';
+              if (delta) {
+                responseText += delta;
+                reportBody.innerHTML = marked.parse(responseText);
+                scrollToBottom(msgBox);
+              }
+            } catch (e) {}
+          }
+        }
+
+        // Handle remaining buffer
+        if (buffer && buffer.startsWith('data: ')) {
+          try {
+            var data = buffer.slice(6).trim();
+            if (data !== '[DONE]') {
+              var json = JSON.parse(data);
+              var delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content || '';
+              if (delta) {
+                responseText += delta;
+                reportBody.innerHTML = marked.parse(responseText);
+              }
+            }
+          } catch (e) {}
+        }
+
+        chatMessages.push({ role: 'assistant', content: responseText });
+        fullReport = chatMessages.filter(function(m) { return m.role === 'assistant'; }).map(function(m) { return m.content; }).join('\n\n---\n\n');
+
+        // Store to workspace
+        var storeBody = {
+          content: text,
+          type: 'docket',
+          fullText: fullReport,
+          messages: chatMessages.slice()
+        };
+        if (currentAuditId) storeBody.audit_id = currentAuditId;
+
+        fetch(API + '/v1/audit/store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(storeBody)
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d.audit_id && !currentAuditId) currentAuditId = d.audit_id;
+        }).catch(function() {});
+
+        // Action buttons
+        var metaRow = document.createElement('div');
+        metaRow.className = 'meta-row';
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = '[COPY]';
+        copyBtn.onclick = function() {
+          navigator.clipboard.writeText(reportBody.innerText).then(function() {
+            copyBtn.textContent = '[COPIED]';
+            copyBtn.classList.add('copied');
+            setTimeout(function() { copyBtn.textContent = '[COPY]'; copyBtn.classList.remove('copied'); }, 2000);
+          });
+        };
+
+        var counselBtn = document.createElement('a');
+        counselBtn.className = 'action-btn counsel';
+        counselBtn.textContent = '[AI COUNSEL]';
+        counselBtn.href = 'https://theofficialaicounsel.com';
+        counselBtn.target = '_blank';
+
+        metaRow.appendChild(copyBtn);
+        metaRow.appendChild(counselBtn);
+        block.appendChild(metaRow);
+        scrollToBottom(msgBox, true);
+
+      } catch (err) {
+        if (thinkingLine && thinkingLine.parentNode) thinkingLine.remove();
+        var errorLine = document.createElement('div');
+        errorLine.className = 'report-body';
+        errorLine.style.color = '#ef4444';
+        errorLine.textContent = 'ERR_FAILURE: ' + err.message;
+        block.appendChild(errorLine);
+      }
+
+      btn.disabled = false;
+      input.focus();
+    }
+  </script>
+</body>
+</html>
